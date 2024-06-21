@@ -59,9 +59,9 @@ func RegisterRoutes(router *gin.Engine, middlewares []gin.HandlerFunc) {
 	m := contextPath.Group(ApiMap)
 	//m.Use(middleware.Auth())
 	{
-		m.POST("/base_map", restHandler.CreateOrUpdateMap)
-		m.GET("/base_map", restHandler.ListMap)
-		m.DELETE("/base_map/:id", restHandler.DeleteMap)
+		m.POST("/base_map", restHandler.CreateOrUpdateBaseMap)
+		m.GET("/base_map", restHandler.ListBaseMap)
+		m.DELETE("/base_map/:id", restHandler.DeleteBaseMap)
 
 		m.POST("/map_nodes", restHandler.CreateOrUpdateNode) //生成路径节点
 		m.GET("/map_nodes", restHandler.ListMapNodes)
