@@ -12,6 +12,7 @@ type BaseMapInfo struct {
 	Name           string  `json:"name"`
 	CreateAt       string  `json:"created_time"`
 	UpdateAt       string  `json:"updated_time"`
+	PathID         int     `json:"path_id"`
 	MapURL         string  `json:"map_url"`
 	MapURLCompress string  `json:"map_url_compress"`
 	Height         float64 `json:"height"`
@@ -36,11 +37,25 @@ type MapRoutesInfo struct {
 	PathRole   string `json:"path_role"` //路径运行规则
 }
 
+type PathInfo struct {
+	ID       int    `json:"id"`
+	Name     string `json:"name"`
+	CreateAt string `json:"created_time"`
+	UpdateAt string `json:"updated_time"`
+}
+
+type PathRequest struct {
+	ID   int    `json:"id" uri:"id" form:"id"`
+	Name string `json:"name" form:"name"`
+	PaginationRequest
+}
+
 type BaseMapRequest struct {
 	ID             int     `json:"id" uri:"id" form:"id"`
 	Name           string  `json:"name" form:"name"`
 	MapURL         string  `json:"map_url"`
 	MapURLCompress string  `json:"map_url_compress"`
+	PathID         int     `json:"path_id" form:"path_id"`
 	Height         float64 `json:"height"`
 	Weight         float64 `json:"weight"`
 	PaginationRequest
@@ -71,6 +86,7 @@ type MapRoutesRequest struct {
 
 func (m *BaseMapInfo) Load(mapData model.BaseMap) {
 	m.ID = mapData.ID
+	m.PathID = mapData.PathID
 	m.Name = mapData.Name
 	m.CreateAt = mapData.CreatedAt.String()
 	m.UpdateAt = mapData.UpdatedAt.String()
@@ -100,7 +116,14 @@ func (m *MapRoutesInfo) Load(routeData model.MapRoutes) {
 	m.UpdateAt = routeData.UpdatedAt.String()
 }
 
-func (req BaseMapRequest) Valid(opt string) error {
+func (m *PathInfo) Load(mapData model.Path) {
+	m.ID = mapData.ID
+	m.Name = mapData.Name
+	m.CreateAt = mapData.CreatedAt.String()
+	m.UpdateAt = mapData.UpdatedAt.String()
+}
+
+func (req PathRequest) Valid(opt string) error {
 	if opt == ValidOptCreateOrUpdate {
 		if req.ID < 0 {
 			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "id")
@@ -113,7 +136,29 @@ func (req BaseMapRequest) Valid(opt string) error {
 			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "id")
 		}
 	} else {
-		orderByFields := []string{model.FieldID, model.FieldName, model.FieldCreatedTime, model.FieldUpdatedTime}
+		orderByFields := []string{model.FieldID, model.FieldPathId, model.FieldName, model.FieldCreatedTime, model.FieldUpdatedTime}
+		return req.PaginationRequest.Valid(orderByFields)
+	}
+	return nil
+}
+
+func (req BaseMapRequest) Valid(opt string) error {
+	if opt == ValidOptCreateOrUpdate {
+		if req.ID < 0 {
+			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "id")
+		}
+		if req.Name == "" {
+			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "name")
+		}
+		if req.PathID < 0 {
+			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "path_id")
+		}
+	} else if opt == ValidOptDel {
+		if req.ID <= 0 {
+			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "id")
+		}
+	} else {
+		orderByFields := []string{model.FieldID, model.FieldPathId, model.FieldName, model.FieldCreatedTime, model.FieldUpdatedTime}
 		return req.PaginationRequest.Valid(orderByFields)
 	}
 	return nil
@@ -163,49 +208,13 @@ func (req MapRoutesRequest) Valid(opt string) error {
 	return nil
 }
 
-//func (req MapRoutesRequest) IsValidRoute(mapUrl string, nodeHead model.MapRouteNodes, nodeEnd model.MapRouteNodes) (bool, error) {
-//	file, err := os.Open(mapUrl)
-//	if err != nil {
-//		return false, err
-//	}
-//	defer file.Close()
-//
-//	var img image.Image
-//	if strings.HasSuffix(mapUrl, ".png") {
-//		img, err = png.Decode(file)
-//	} else if strings.HasSuffix(mapUrl, ".jpg") {
-//		img, err = jpeg.Decode(file)
-//	} else {
-//		return false, fmt.Errorf("图片不是.jpg或.png格式")
-//	}
-//	if err != nil {
-//		return false, err
-//	}
-//
-//	if nodeHead.Roi[0] == nodeEnd.Roi[0] {
-//		//若x坐标相等
-//		for y := nodeHead.Roi[1]; y < nodeEnd.Roi[1]; y++ {
-//			color := img.At(int(nodeHead.Roi[0]), int(y))
-//			r, g, b, _ := color.RGBA()
-//			if r>>8 > 150 && g>>8 > 150 && b>>8 > 150 {
-//				return false, fmt.Errorf("所选路径包含障碍物")
-//			}
-//		}
-//	} else if nodeHead.Roi[1] == nodeEnd.Roi[1] {
-//		//若y坐标相等
-//		for x := nodeHead.Roi[0]; x < nodeEnd.Roi[0]; x++ {
-//			color := img.At(int(x), int(nodeHead.Roi[1]))
-//			r, g, b, _ := color.RGBA()
-//			if r>>8 > 150 && g>>8 > 150 && b>>8 > 150 {
-//				return false, fmt.Errorf("所选路径包含障碍物")
-//			}
-//		}
-//	}
-//	return true, nil
-//}
-
 type MapPageResponse struct {
 	List []BaseMapInfo `json:"list"`
+	PaginationResponse
+}
+
+type PathResponse struct {
+	List []PathInfo `json:"list"`
 	PaginationResponse
 }
 
@@ -249,8 +258,17 @@ func (resp *MapRoutesResponse) Load(total int64, list []model.MapRoutes) {
 	resp.TotalSize = int(total)
 }
 
+func (resp *PathResponse) Load(total int64, list []model.Path) {
+	resp.List = make([]PathInfo, 0, len(list))
+	for _, v := range list {
+		info := PathInfo{}
+		info.Load(v)
+		resp.List = append(resp.List, info)
+	}
+	resp.TotalSize = int(total)
+}
+
 func IsPointAbove(p, p1, p2 pq.Float64Array) bool {
-	fmt.Println(p, p1, p2)
 	if (p[0] > p1[0] && p[0] < p2[0]) || (p[0] > p2[0] && p[0] < p1[0]) {
 		if (p[1] > p1[1] && p[1] < p2[1]) || (p[1] > p2[1] && p[1] < p1[1]) {
 			return true

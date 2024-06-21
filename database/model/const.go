@@ -111,12 +111,15 @@ const (
 	TableNameVerifyTask           = "verify_task"
 	TableNameRegionNerfPhotoPoint = "region_nerf_photo_point"
 	TableNameMap                  = "map"
+	TableNameBaseMap              = "base_map"
 	TableNameMapRoutes            = "map_routes"
 	TableNameMapRouteNodes        = "map_route_nodes"
+	TableNamePath                 = "path"
 
-	FieldID    = "id"
-	FieldName  = "name"
-	FieldMapId = "map_id"
+	FieldID     = "id"
+	FieldName   = "name"
+	FieldMapId  = "map_id"
+	FieldPathId = "path_id"
 
 	FieldCarriageNumber = "carriage_number"
 	FieldTrainTypeID    = "train_type_id"

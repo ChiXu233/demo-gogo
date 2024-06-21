@@ -7,6 +7,7 @@ type BaseMap struct {
 	Name           string  `json:"name" gorm:"column:name"`
 	MapURL         string  `json:"map_url" gorm:"column:map_url"`
 	MapURLCompress string  `json:"map_url_compress" gorm:"column:map_url_compress"`
+	PathID         int     `json:"path_id" gorm:"column:path_id"` //对应大路径id
 	Height         float64 `json:"height"`
 	Weight         float64 `json:"weight"`
 }
@@ -27,6 +28,11 @@ type MapRouteNodes struct {
 	Roi      pq.Float64Array `gorm:"column:roi;type:float8[]" json:"-"` //节点坐标,[33,66]=>(x,y)
 }
 
+type Path struct {
+	Model
+	Name string `json:"name" gorm:"column:name"` //大路径名称
+}
+
 func (m *BaseMap) TableName() string {
 	return TableNameMap
 }
@@ -35,4 +41,7 @@ func (m *MapRoutes) TableName() string {
 }
 func (m *MapRouteNodes) TableName() string {
 	return TableNameMapRouteNodes
+}
+func (m *Path) TableName() string {
+	return TableNamePath
 }

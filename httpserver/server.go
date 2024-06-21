@@ -62,14 +62,15 @@ func RegisterRoutes(router *gin.Engine, middlewares []gin.HandlerFunc) {
 		m.POST("/base_map", restHandler.CreateOrUpdateBaseMap)
 		m.GET("/base_map", restHandler.ListBaseMap)
 		m.DELETE("/base_map/:id", restHandler.DeleteBaseMap)
-
 		m.POST("/map_nodes", restHandler.CreateOrUpdateNode) //生成路径节点
 		m.GET("/map_nodes", restHandler.ListMapNodes)
 		m.DELETE("/map_nodes/:id", restHandler.DeleteMapNodes)
-
 		m.POST("/map_routes", restHandler.CreateOrUpdateMapRoutes) //生成路径节点+路径
 		m.GET("/map_routes", restHandler.ListMapRoutes)            //查找路径
 		m.DELETE("/map_routes/:id", restHandler.DeleteMapRoute)
+		m.POST("/path", restHandler.CreateOrUpdatePath)
+		m.GET("/paths", restHandler.ListPath)
+		m.DELETE("/path/:id", restHandler.DeletePath)
 	}
 
 	if config.Conf.APP.Mode == gin.DebugMode {

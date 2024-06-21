@@ -101,6 +101,10 @@ func initTable(db *gorm.DB) {
 	if err != nil {
 		log.Error("init table[%s] error.[%s]", model.TableNameMapRouteNodes, err.Error())
 	}
+	err = db.AutoMigrate(&model.Path{})
+	if err != nil {
+		log.Error("init table[%s] error.[%s]", model.TableNamePath, err.Error())
+	}
 }
 
 func (db *OrmDB) Begin() (Database, error) {

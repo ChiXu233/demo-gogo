@@ -131,7 +131,6 @@ func (handler *RestHandler) DeleteMapNodes(c *gin.Context) {
 	app.Success(c, nil)
 }
 
-// 接收n个点位信息，将点位按照顺序存储并生成路径
 func (handler *RestHandler) CreateOrUpdateMapRoutes(c *gin.Context) {
 	var req apimodel.MapRoutesArrRequest
 	err := c.ShouldBindJSON(&req)
@@ -187,6 +186,68 @@ func (handler *RestHandler) DeleteMapRoute(c *gin.Context) {
 		return
 	}
 	err = handler.Operator.DeleteMapRoute(&req)
+	if err != nil {
+		app.SendServerErrorResponse(c, errcode.ErrorMsgDeleteData, err)
+		return
+	}
+	app.Success(c, nil)
+}
+
+func (handler *RestHandler) CreateOrUpdatePath(c *gin.Context) {
+	var req apimodel.PathRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		app.SendParameterErrorResponse(c, errcode.ErrorMsgLoadParam)
+		return
+	}
+	err = req.Valid(apimodel.ValidOptCreateOrUpdate)
+	if err != nil {
+		app.SendParameterErrorResponse(c, err.Error())
+		return
+	}
+	err = handler.Operator.CreateOrUpdatePath(&req)
+	if err != nil {
+		app.SendServerErrorResponse(c, errcode.ErrorMsgCreateOrUpdate, err)
+		return
+	}
+	app.Success(c, nil)
+}
+
+func (handler *RestHandler) ListPath(c *gin.Context) {
+	req := apimodel.PathRequest{
+		PaginationRequest: apimodel.DefaultPaginationRequest,
+	}
+	err := c.ShouldBindQuery(&req)
+	if err != nil {
+		app.SendParameterErrorResponse(c, errcode.ErrorMsgLoadParam)
+		return
+	}
+	err = req.Valid(apimodel.ValidOptList)
+	if err != nil {
+		app.SendParameterErrorResponse(c, err.Error())
+		return
+	}
+	resp, err := handler.Operator.ListPath(&req)
+	if err != nil {
+		app.SendServerErrorResponse(c, errcode.ErrorMsgListData, err)
+		return
+	}
+	app.Success(c, resp)
+}
+
+func (handler *RestHandler) DeletePath(c *gin.Context) {
+	var req apimodel.PathRequest
+	err := c.ShouldBindUri(&req)
+	if err != nil {
+		app.SendParameterErrorResponse(c, errcode.ErrorMsgLoadParam)
+		return
+	}
+	err = req.Valid(apimodel.ValidOptDel)
+	if err != nil {
+		app.SendParameterErrorResponse(c, err.Error())
+		return
+	}
+	err = handler.Operator.DeletePath(&req)
 	if err != nil {
 		app.SendServerErrorResponse(c, errcode.ErrorMsgDeleteData, err)
 		return
