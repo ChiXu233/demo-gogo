@@ -93,7 +93,14 @@ func initTable(db *gorm.DB) {
 	if err != nil {
 		log.Error("init table[%s] error.[%s]", model.TableNameMap, err.Error())
 	}
-	fmt.Println("初始化map表成功")
+	err = db.AutoMigrate(&model.MapRoutes{})
+	if err != nil {
+		log.Error("init table[%s] error.[%s]", model.TableNameMapRoutes, err.Error())
+	}
+	err = db.AutoMigrate(&model.MapRouteNodes{})
+	if err != nil {
+		log.Error("init table[%s] error.[%s]", model.TableNameMapRouteNodes, err.Error())
+	}
 }
 
 func (db *OrmDB) Begin() (Database, error) {

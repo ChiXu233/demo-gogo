@@ -12,9 +12,15 @@ type ResourceOperator struct {
 }
 
 type Operator interface {
-	CreateOrUpdateMap(req *apimodel.MapRequest) error
-	ListMap(req *apimodel.MapRequest) (*apimodel.MapPageResponse, error)
-	DeleteMap(req *apimodel.MapRequest) error
+	CreateOrUpdateBaseMap(req *apimodel.BaseMapRequest) error
+	ListBaseMap(req *apimodel.BaseMapRequest) (*apimodel.MapPageResponse, error)
+	DeleteBaseMap(req *apimodel.BaseMapRequest) error
+	CreateOrUpdateNode(req *apimodel.RouteNodesRequest) error
+	ListMapNodes(req *apimodel.RouteNodesRequest) (*apimodel.RouteNodesResponse, error)
+	DeleteMapNodes(req *apimodel.RouteNodesRequest) error
+	CreateOrUpdateMapRoute(req *apimodel.MapRoutesArrRequest) error
+	ListMapRoutes(req *apimodel.MapRoutesRequest) (*apimodel.MapRoutesResponse, error)
+	DeleteMapRoute(req *apimodel.MapRoutesRequest) error
 }
 
 func GetOperator() Operator {

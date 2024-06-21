@@ -136,6 +136,8 @@ const (
 	ErrorMsgTransactionCommit   = "事务提交失败"
 	ErrorMsgTransactionRollback = "事务回滚失败"
 	ErrorMsgHttpClientError     = "第三方服务异常"
+
+	ErrorMsgNodeOvertopArea = "节点超出区域范围"
 )
 
 var (
@@ -233,6 +235,7 @@ var (
 		ErrorMsgNerfDataOccupied:           5083,
 		ErrorMsgNerfDataImage:              5084,
 		ErrorMsgOccupyRobot:                5085,
+		ErrorMsgNodeOvertopArea:            5086,
 
 		ErrorMsgDataExists:          6000,
 		ErrorMsgDataNotExists:       6001,

@@ -1,5 +1,7 @@
 package model
 
+import "github.com/lib/pq"
+
 type BaseMap struct {
 	Model
 	Name           string  `json:"name" gorm:"column:name"`
@@ -11,20 +13,18 @@ type BaseMap struct {
 
 type MapRoutes struct {
 	Model
-	RoutesName string `json:"routes_name" gorm:"column:routes_name"` //路径名称
-	MapID      uint   `json:"map_id" gorm:"column:map_id"`           //对应mapID
-	NodesID    []uint `json:"nodes_id" gorm:"column:nodes_id"`       //包含路径节点ID
-	Path       string `json:"path" gorm:"column:path"`               //路径
-	PathRole   string `json:"path_role" gorm:"column:path_role"`     //路径运行规则
+	RoutesName string `json:"name" gorm:"column:name"`           //路径名称
+	MapID      int    `json:"map_id" gorm:"column:map_id"`       //对应mapID
+	PathRole   string `json:"path_role" gorm:"column:path_role"` //路径运行规则
 }
 
 type MapRouteNodes struct {
 	Model
-	NodeName string `json:"node_name" gorm:"column:node_name" ` //节点名称
-	MapID    uint   `json:"map_id" gorm:"column:map_id"`        //对应mapID
-	Angle    uint   `json:"angle" gorm:"column:angle"`          //节点角度
-	Comment  string `json:"comment" gorm:"column:comment"`      //标签
-	RoiArray []uint `json:"roi_array" gorm:"column:roi_array"`  //节点坐标,[33,66]=>(x,y)
+	NodeName string          `json:"name" gorm:"column:name" `          //节点名称
+	MapID    int             `json:"map_id" gorm:"column:map_id"`       //对应mapID
+	Angle    string          `json:"angle" gorm:"column:angle"`         //节点角度
+	Comment  string          `json:"comment" gorm:"column:comment"`     //标签
+	Roi      pq.Float64Array `gorm:"column:roi;type:float8[]" json:"-"` //节点坐标,[33,66]=>(x,y)
 }
 
 func (m *BaseMap) TableName() string {

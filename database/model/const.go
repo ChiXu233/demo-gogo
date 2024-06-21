@@ -114,8 +114,9 @@ const (
 	TableNameMapRoutes            = "map_routes"
 	TableNameMapRouteNodes        = "map_route_nodes"
 
-	FieldID   = "id"
-	FieldName = "name"
+	FieldID    = "id"
+	FieldName  = "name"
+	FieldMapId = "map_id"
 
 	FieldCarriageNumber = "carriage_number"
 	FieldTrainTypeID    = "train_type_id"
