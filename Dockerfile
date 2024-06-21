@@ -2,7 +2,7 @@ FROM alpine
 
 WORKDIR /workspace/demo-gogo
 
-COPY demo-gogo .
+COPY demo-gogogo .
 
 ADD conf .
 
