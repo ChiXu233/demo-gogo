@@ -4,8 +4,8 @@ WORKDIR /workspace/demo-gogo
 
 COPY demo-gogo .
 
-ADD config.yaml .
-ADD log.json .
+ADD conf .
+
 
 EXPOSE 9094
 
