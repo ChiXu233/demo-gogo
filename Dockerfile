@@ -2,11 +2,12 @@ FROM alpine
 
 WORKDIR /workspace/demo-gogo
 
-COPY demo-gogogo .
+COPY teach .
 
-ADD conf .
+ADD config.yaml .
+ADD log.json .
 
 
 EXPOSE 9094
 
-CMD ["./demo-gogo"]
+CMD ["./teach"]
