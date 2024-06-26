@@ -7,9 +7,12 @@ type BaseMap struct {
 	Name           string  `json:"name" gorm:"column:name"`
 	MapURL         string  `json:"map_url" gorm:"column:map_url"`
 	MapURLCompress string  `json:"map_url_compress" gorm:"column:map_url_compress"`
-	PathID         int     `json:"path_id" gorm:"column:path_id"` //对应大路径id
+	PointCloud     string  `json:"point_cloud" gorm:"column:point_cloud"` //点云
+	PathID         int     `json:"path_id" gorm:"column:path_id"`         //对应大路径id
 	Height         float64 `json:"height"`
 	Weight         float64 `json:"weight"`
+	Origin         float64 `json:"origin" gorm:"column:origin"`           //z轴起点
+	Destination    float64 `json:"destination" gorm:"column:destination"` //z轴终点
 }
 
 type MapRoutes struct {

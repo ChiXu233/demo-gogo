@@ -5,6 +5,7 @@ import (
 	"demo-gogo/httpserver/errcode"
 	"fmt"
 	"github.com/lib/pq"
+	"math"
 )
 
 type BaseMapInfo struct {
@@ -15,8 +16,11 @@ type BaseMapInfo struct {
 	PathID         int     `json:"path_id"`
 	MapURL         string  `json:"map_url"`
 	MapURLCompress string  `json:"map_url_compress"`
+	PointCloud     string  `json:"point_cloud"` //点云
 	Height         float64 `json:"height"`
 	Weight         float64 `json:"weight"`
+	Origin         float64 `json:"origin"`      //z轴起点
+	Destination    float64 `json:"destination"` //z轴终点
 }
 type RouteNodesInfo struct {
 	ID       int             `json:"id"`
@@ -55,9 +59,12 @@ type BaseMapRequest struct {
 	Name           string  `json:"name" form:"name"`
 	MapURL         string  `json:"map_url"`
 	MapURLCompress string  `json:"map_url_compress"`
+	PointCloud     string  `json:"point_cloud" gorm:"column:point_cloud"` //点云
 	PathID         int     `json:"path_id" form:"path_id"`
 	Height         float64 `json:"height"`
 	Weight         float64 `json:"weight"`
+	Origin         float64 `json:"origin"`      //z轴起点
+	Destination    float64 `json:"destination"` //z轴终点
 	PaginationRequest
 }
 
@@ -94,6 +101,9 @@ func (m *BaseMapInfo) Load(mapData model.BaseMap) {
 	m.MapURLCompress = mapData.MapURLCompress
 	m.Height = mapData.Height
 	m.Weight = mapData.Weight
+	m.Origin = mapData.Origin
+	m.Destination = mapData.Destination
+	m.PointCloud = mapData.PointCloud
 }
 
 func (m *RouteNodesInfo) Load(nodeData model.MapRouteNodes) {
@@ -269,12 +279,23 @@ func (resp *PathResponse) Load(total int64, list []model.Path) {
 }
 
 func IsPointAbove(p, p1, p2 pq.Float64Array) bool {
-	if (p[0] > p1[0] && p[0] < p2[0]) || (p[0] > p2[0] && p[0] < p1[0]) {
-		if (p[1] > p1[1] && p[1] < p2[1]) || (p[1] > p2[1] && p[1] < p1[1]) {
-			return true
-		}
+	//if (p[0] >= p1[0] && p[0] <= p2[0]) || (p[0] > p2[0] && p[0] < p1[0]) {
+	//	if (p[1] >= p1[1] && p[1] <= p2[1]) || (p[1] > p2[1] && p[1] < p1[1]) {
+	//		return true
+	//	}
+	//}
+	//return false
+	if (p[0] < p1[0] && p[0] > p2[0]) || (p[0] < p2[0] && p[0] > p1[0]) {
+		return false
 	}
-	return false
+	if (p[1] < p1[1] && p[1] > p2[1]) || (p[1] < p2[1] && p[1] > p1[1]) {
+		return false
+	}
+	slope := math.Abs((p2[1] - p1[1]) / (p2[0] - p1[0]))
+	intercept := p1[1] - slope*p1[0]
+	expected := slope*p[1] + intercept
+	return p[1] == expected
+
 }
 
 func IsPointOnLine(p, p1, p2 pq.Float64Array) bool {

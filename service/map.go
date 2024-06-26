@@ -4,7 +4,6 @@ import (
 	"demo-gogo/api/apimodel"
 	"demo-gogo/database/model"
 	"demo-gogo/httpserver/errcode"
-	"demo-gogo/utils"
 	"errors"
 	"fmt"
 	"github.com/jinzhu/copier"
@@ -19,6 +18,7 @@ import (
 
 func (operator *ResourceOperator) CreateOrUpdateBaseMap(req *apimodel.BaseMapRequest) error {
 	var opt model.BaseMap
+	var pathMap model.Path
 	selector := make(map[string]interface{})
 	// 名称唯一性
 	selector[model.FieldName] = req.Name
@@ -29,10 +29,10 @@ func (operator *ResourceOperator) CreateOrUpdateBaseMap(req *apimodel.BaseMapReq
 	if opt.ID != 0 && opt.ID != req.ID {
 		return fmt.Errorf(errcode.ErrorMsgSuffixParamExists, "地图")
 	}
-	if !utils.Exists(req.MapURL) {
-		err = fmt.Errorf("路径文件不存在")
-		return err
-	}
+	//if !utils.Exists(req.MapURL) {
+	//	err = fmt.Errorf("路径文件不存在")
+	//	return err
+	//}
 	if (req.Height == 0 && req.Weight == 0) && strings.HasSuffix(path.Base(req.MapURL), ".png") {
 		file, err := os.Open(req.MapURL)
 		if err != nil {
@@ -56,7 +56,7 @@ func (operator *ResourceOperator) CreateOrUpdateBaseMap(req *apimodel.BaseMapReq
 			return err
 		}
 	}
-	err = operator.Database.GetEntityByID(model.TableNamePath, req.PathID, &opt)
+	err = operator.Database.GetEntityByID(model.TableNamePath, req.PathID, &pathMap)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fmt.Errorf(errcode.ErrorMsgSuffixParamNotExists, "关联大路径")
@@ -368,8 +368,8 @@ func (operator *ResourceOperator) CreateOrUpdateMapRoute(req *apimodel.MapRoutes
 			return err
 		}
 	}
-	//生成对应路径
 
+	//不传routes，自动生成对应路径
 	for i := 0; i < len(nodes)-1; i++ {
 		route := model.MapRoutes{
 			RoutesName: nodes[i].NodeName + "-" + nodes[i+1].NodeName,
@@ -389,11 +389,10 @@ func (operator *ResourceOperator) CreateOrUpdateMapRoute(req *apimodel.MapRoutes
 		if routeIndex.ID != 0 {
 			continue
 		}
-
 		createRoutes = append(createRoutes, route)
 	}
 
-	if req.Routes != nil {
+	if len(req.Routes) != 0 {
 		//以传入的routes为准
 		createRoutes = nil
 		//编辑路径名称以及路径规则
@@ -433,6 +432,60 @@ func (operator *ResourceOperator) CreateOrUpdateMapRoute(req *apimodel.MapRoutes
 		}
 	}
 
+	if req.Nodes != nil {
+		//校正是否有节点交叉左右联通
+		nameMap := make(map[string]struct{})
+		roiMap := make(map[string]model.MapRouteNodes)
+		var routes []model.MapRoutes
+		var nodeNames, nodeRois []model.MapRouteNodes
+		selector = make(map[string]interface{})
+		selector[model.FieldMapId] = req.Nodes[0].MapID
+		if err = operator.Database.ListEntityByFilter(model.TableNameMapRoutes, selector, model.QueryParams{}, &routes); err != nil {
+			return err
+		}
+		err = operator.Database.GetEntityPluck(model.TableNameMapRouteNodes, selector, model.QueryParams{}, "name", &nodeNames)
+		if err != nil {
+			return err
+		}
+		err = operator.Database.GetEntityPluck(model.TableNameMapRouteNodes, selector, model.QueryParams{}, "roi", &nodeRois)
+		if err != nil {
+			return err
+		}
+		//
+		for i := range nodeNames {
+			nodeNames[i].Roi = nodeRois[i].Roi
+		}
+		routes = append(routes, createRoutes...)
+		routes = append(routes, updateRoutes...)
+		for _, route := range routes {
+			nameMap[route.RoutesName] = struct{}{}
+		}
+		for _, node := range nodeNames {
+			roiMap[node.NodeName] = node
+		}
+		for _, point := range nodes {
+			for _, v := range routes {
+				//拿到路径的起始点、末尾点坐标
+				var roiH, roiE pq.Float64Array
+				nodeHeadName := strings.Split(v.RoutesName, "-")[0]
+				nodeEndName := strings.Split(v.RoutesName, "-")[1]
+				roiH = roiMap[nodeHeadName].Roi
+				roiE = roiMap[nodeEndName].Roi
+				if (roiH != nil && roiE != nil) && apimodel.IsPointAbove(point.Roi, roiH, roiE) {
+					//同一线段上
+					routeA := model.MapRoutes{RoutesName: nodeHeadName + "-" + point.NodeName, MapID: point.MapID, PathRole: ""}
+					routeB := model.MapRoutes{RoutesName: point.NodeName + "-" + nodeEndName, MapID: point.MapID, PathRole: ""}
+					if _, ok := nameMap[routeA.RoutesName]; ok {
+						continue
+					}
+					if _, ok := nameMap[routeB.RoutesName]; ok {
+						continue
+					}
+					createRoutes = append(createRoutes, routeA, routeB)
+				}
+			}
+		}
+	}
 	for _, v := range updateRoutes {
 		err = operator.Database.SaveEntity(model.TableNameMapRoutes, &v)
 		if err != nil {
@@ -453,7 +506,6 @@ func (operator *ResourceOperator) CreateOrUpdateMapRoute(req *apimodel.MapRoutes
 		return err
 	}
 	return nil
-
 }
 
 func (operator *ResourceOperator) ListMapRoutes(req *apimodel.MapRoutesRequest) (*apimodel.MapRoutesResponse, error) {
