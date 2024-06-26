@@ -1,6 +1,6 @@
 FROM alpine
 
-WORKDIR /workspace/demo-gogo
+WORKDIR /workspace/teach
 
 COPY teach .
 
