@@ -71,6 +71,7 @@ func RegisterRoutes(router *gin.Engine, middlewares []gin.HandlerFunc) {
 		m.POST("/path", restHandler.CreateOrUpdatePath)
 		m.GET("/paths", restHandler.ListPath)
 		m.DELETE("/path/:id", restHandler.DeletePath)
+		m.POST("/check_route", restHandler.CheckRoute) //检验路径
 	}
 
 	if config.Conf.APP.Mode == gin.DebugMode {

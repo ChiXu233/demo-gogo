@@ -24,6 +24,7 @@ type Operator interface {
 	CreateOrUpdatePath(req *apimodel.PathRequest) error
 	ListPath(req *apimodel.PathRequest) (*apimodel.PathResponse, error)
 	DeletePath(req *apimodel.PathRequest) error
+	CheckRoute(req *apimodel.MapRoutesArrRequest) error
 }
 
 func GetOperator() Operator {

@@ -138,7 +138,7 @@ func (handler *RestHandler) CreateOrUpdateMapRoutes(c *gin.Context) {
 		app.SendParameterErrorResponse(c, errcode.ErrorMsgLoadParam)
 		return
 	}
-	for _, routes := range req.Nodes {
+	for _, routes := range req.Routes {
 		err = routes.Valid(apimodel.ValidOptCreateOrUpdate)
 		if err != nil {
 			app.SendParameterErrorResponse(c, err.Error())
@@ -252,5 +252,29 @@ func (handler *RestHandler) DeletePath(c *gin.Context) {
 		app.SendServerErrorResponse(c, errcode.ErrorMsgDeleteData, err)
 		return
 	}
+	app.Success(c, nil)
+}
+
+// CheckRoute 导航路径校验
+func (handler *RestHandler) CheckRoute(c *gin.Context) {
+	var req apimodel.MapRoutesArrRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		app.SendParameterErrorResponse(c, errcode.ErrorMsgLoadParam)
+		return
+	}
+	for _, routes := range req.Routes {
+		err = routes.Valid(apimodel.ValidOptCreateOrUpdate)
+		if err != nil {
+			app.SendParameterErrorResponse(c, err.Error())
+			return
+		}
+	}
+	err = handler.Operator.CheckRoute(&req)
+	if err != nil {
+		app.SendServerErrorResponse(c, err.Error(), err)
+		return
+	}
+
 	app.Success(c, nil)
 }

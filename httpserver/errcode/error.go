@@ -138,6 +138,7 @@ const (
 	ErrorMsgHttpClientError     = "第三方服务异常"
 
 	ErrorMsgNodeOvertopArea = "节点超出区域范围"
+	ErrorMsgCheckRoute      = "路径校验失败"
 )
 
 var (
@@ -244,6 +245,7 @@ var (
 		ErrorMsgTransactionRollback: 6004,
 		ErrorMsgHttpClientError:     6005,
 		ErrorMsgUpgradeWebSocket:    6006,
+		ErrorMsgCheckRoute:          6007,
 	}
 
 	// CommonErrorMsg 通用错误信息

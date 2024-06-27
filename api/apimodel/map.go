@@ -27,7 +27,7 @@ type RouteNodesInfo struct {
 	CreateAt string          `json:"created_time"`
 	UpdateAt string          `json:"updated_time"`
 	NodeName string          `json:"name"`
-	MapID    int             `json:"map_id"`  //对应mapID
+	PathID   int             `json:"path_id"` //对应pathID
 	Angle    string          `json:"angle"`   //节点角度
 	Comment  string          `json:"comment"` //标签
 	Roi      pq.Float64Array `json:"roi"`     //节点坐标,[33,66]=>(x,y)
@@ -36,8 +36,8 @@ type MapRoutesInfo struct {
 	ID         int    `json:"id"`
 	CreateAt   string `json:"created_time"`
 	UpdateAt   string `json:"updated_time"`
-	RoutesName string `json:"name"`      //路径名称
-	MapID      int    `json:"map_id"`    //对应mapID
+	RoutesName string `json:"name"` //路径名称
+	PathID     int    `json:"path_id"`
 	PathRole   string `json:"path_role"` //路径运行规则
 }
 
@@ -71,10 +71,10 @@ type BaseMapRequest struct {
 type RouteNodesRequest struct {
 	ID       int             `json:"id" uri:"id" form:"id"`
 	NodeName string          `json:"name" form:"name"`
-	MapID    int             `json:"map_id" form:"map_id"` //对应mapID
-	Angle    string          `json:"angle"`                //节点角度
-	Comment  string          `json:"comment"`              //标签
-	Roi      pq.Float64Array `json:"roi"`                  //节点坐标,[33,66]=>(x,y)
+	PathID   int             `json:"path_id" form:"path_id"` //对应pathID
+	Angle    string          `json:"angle"`                  //节点角度
+	Comment  string          `json:"comment"`                //标签
+	Roi      pq.Float64Array `json:"roi"`                    //节点坐标,[33,66]=>(x,y)
 	PaginationRequest
 }
 
@@ -85,9 +85,9 @@ type MapRoutesArrRequest struct {
 
 type MapRoutesRequest struct {
 	ID         int    `json:"id" uri:"id" form:"id"`
-	RoutesName string `json:"name" form:"name"`     //路径名称
-	MapID      int    `json:"map_id" form:"map_id"` //对应mapID
-	PathRole   string `json:"path_role"`            //路径运行规则
+	RoutesName string `json:"name" form:"name"`       //路径名称
+	PathID     int    `json:"path_id" form:"path_id"` //对应pathID
+	PathRole   string `json:"path_role"`              //路径运行规则
 	PaginationRequest
 }
 
@@ -109,7 +109,7 @@ func (m *BaseMapInfo) Load(mapData model.BaseMap) {
 func (m *RouteNodesInfo) Load(nodeData model.MapRouteNodes) {
 	m.ID = nodeData.ID
 	m.NodeName = nodeData.NodeName
-	m.MapID = nodeData.MapID
+	m.PathID = nodeData.PathID
 	m.Angle = nodeData.Angle
 	m.Comment = nodeData.Comment
 	m.Roi = nodeData.Roi
@@ -120,7 +120,7 @@ func (m *RouteNodesInfo) Load(nodeData model.MapRouteNodes) {
 func (m *MapRoutesInfo) Load(routeData model.MapRoutes) {
 	m.ID = routeData.ID
 	m.RoutesName = routeData.RoutesName
-	m.MapID = routeData.MapID
+	m.PathID = routeData.PathID
 	m.PathRole = routeData.PathRole
 	m.CreateAt = routeData.CreatedAt.String()
 	m.UpdateAt = routeData.UpdatedAt.String()
@@ -182,15 +182,15 @@ func (req RouteNodesRequest) Valid(opt string) error {
 		if req.NodeName == "" {
 			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "name")
 		}
-		if req.MapID == 0 {
-			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "map_id")
+		if req.PathID == 0 {
+			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "path_id")
 		}
 	} else if opt == ValidOptDel {
 		if req.ID <= 0 {
 			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "id")
 		}
 	} else {
-		orderByFields := []string{model.FieldID, model.FieldName, model.FieldMapId, model.FieldCreatedTime, model.FieldUpdatedTime}
+		orderByFields := []string{model.FieldID, model.FieldName, model.FieldPathId, model.FieldCreatedTime, model.FieldUpdatedTime}
 		return req.PaginationRequest.Valid(orderByFields)
 	}
 	return nil
@@ -204,7 +204,7 @@ func (req MapRoutesRequest) Valid(opt string) error {
 		if req.RoutesName == "" {
 			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "name")
 		}
-		if req.MapID == 0 {
+		if req.PathID == 0 {
 			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "map_id")
 		}
 	} else if opt == ValidOptDel {
@@ -212,7 +212,7 @@ func (req MapRoutesRequest) Valid(opt string) error {
 			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "id")
 		}
 	} else {
-		orderByFields := []string{model.FieldID, model.FieldName, model.FieldMapId, model.FieldCreatedTime, model.FieldUpdatedTime}
+		orderByFields := []string{model.FieldID, model.FieldName, model.FieldPathId, model.FieldCreatedTime, model.FieldUpdatedTime}
 		return req.PaginationRequest.Valid(orderByFields)
 	}
 	return nil
@@ -278,13 +278,8 @@ func (resp *PathResponse) Load(total int64, list []model.Path) {
 	resp.TotalSize = int(total)
 }
 
+// IsPointAbove 判断点是否在直线上
 func IsPointAbove(p, p1, p2 pq.Float64Array) bool {
-	//if (p[0] >= p1[0] && p[0] <= p2[0]) || (p[0] > p2[0] && p[0] < p1[0]) {
-	//	if (p[1] >= p1[1] && p[1] <= p2[1]) || (p[1] > p2[1] && p[1] < p1[1]) {
-	//		return true
-	//	}
-	//}
-	//return false
 	if (p[0] < p1[0] && p[0] > p2[0]) || (p[0] < p2[0] && p[0] > p1[0]) {
 		return false
 	}
@@ -300,4 +295,34 @@ func IsPointAbove(p, p1, p2 pq.Float64Array) bool {
 
 func IsPointOnLine(p, p1, p2 pq.Float64Array) bool {
 	return (p[0]-p1[0])*(p2[1]-p1[1]) == (p[1]-p1[1])*(p2[0]-p1[0])
+}
+
+// PointsAbove 返回线段上的所有点
+func PointsAbove(p1, p2 pq.Float64Array) [][]float64 {
+	var x1, x2, y1, y2 float64
+	var point [][]float64
+	if p1[0] > p2[0] {
+		x1, y1 = p2[0], p2[1]
+		x2, y2 = p1[0], p1[1]
+	} else {
+		x1, y1 = p1[0], p1[1]
+		x2, y2 = p2[0], p2[1]
+	}
+
+	if x1 == x2 {
+		for y := y1; y <= y2; y++ {
+			point = append(point, []float64{x1, y})
+		}
+	} else if y1 == y2 {
+		for x := x1; x <= x2; x++ {
+			point = append(point, []float64{x, y1})
+		}
+	} else {
+		slope := (y2 - y1) / (x2 - x1)
+		for x := x1; x <= x2; x++ {
+			y := math.Round(y1 + slope*(x-x1))
+			point = append(point, []float64{x, y})
+		}
+	}
+	return point
 }
