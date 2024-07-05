@@ -17,16 +17,22 @@ type BaseMap struct {
 
 type MapRoutes struct {
 	Model
-	RoutesName string `json:"name" gorm:"column:name"`           //路径名称
-	PathID     int    `json:"path_id" gorm:"column:path_id"`     //对应大路径id
-	PathRole   string `json:"path_role" gorm:"column:path_role"` //路径运行规则
+	RoutesName string          `json:"name" gorm:"column:name"`           //路径名称
+	PathID     int             `json:"path_id" gorm:"column:path_id"`     //对应大路径id
+	PathRole   string          `json:"path_role" gorm:"column:path_role"` //路径运行规则
+	Start      string          `json:"start" gorm:"column:start"`
+	End        string          `json:"end" gorm:"column:end"`
+	StartToEnd string          `json:"start_end" gorm:"column:start_end"` //运行方向
+	EndToStart string          `json:"end_start" gorm:"column:end_start"` //运行方向
+	StartRoi   pq.Float64Array `json:"start_roi" gorm:"column:start_roi;type:float8[]"`
+	EndRoi     pq.Float64Array `json:"end_roi" gorm:"column:end_point;type:float8[]"`
 }
 
 type MapRouteNodes struct {
 	Model
 	NodeName string          `json:"name" gorm:"column:name" `          //节点名称
 	PathID   int             `json:"path_id" gorm:"column:path_id"`     //对应大路径id
-	Angle    string          `json:"angle" gorm:"column:angle"`         //节点角度
+	Angle    float64         `json:"angle" gorm:"column:angle"`         //节点角度
 	Comment  string          `json:"comment" gorm:"column:comment"`     //标签
 	Roi      pq.Float64Array `gorm:"column:roi;type:float8[]" json:"-"` //节点坐标,[33,66]=>(x,y)
 }
