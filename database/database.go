@@ -89,7 +89,11 @@ func SetMockDatabase(mockDB Database) {
 }
 
 func initTable(db *gorm.DB) {
-	err := db.AutoMigrate(&model.BaseMap{})
+	err := db.AutoMigrate(&model.Map{})
+	if err != nil {
+		log.Error("init table[%s] error.[%s]", model.TableNameMap, err.Error())
+	}
+	err = db.AutoMigrate(&model.MapInfo{})
 	if err != nil {
 		log.Error("init table[%s] error.[%s]", model.TableNameMap, err.Error())
 	}
@@ -100,10 +104,6 @@ func initTable(db *gorm.DB) {
 	err = db.AutoMigrate(&model.MapRouteNodes{})
 	if err != nil {
 		log.Error("init table[%s] error.[%s]", model.TableNameMapRouteNodes, err.Error())
-	}
-	err = db.AutoMigrate(&model.Path{})
-	if err != nil {
-		log.Error("init table[%s] error.[%s]", model.TableNamePath, err.Error())
 	}
 }
 

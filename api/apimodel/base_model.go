@@ -1,6 +1,7 @@
 package apimodel
 
 import (
+	"demo-gogo/database/model"
 	"demo-gogo/httpserver/errcode"
 	"fmt"
 	"gorm.io/gorm/utils"
@@ -32,6 +33,25 @@ type PaginationRequest struct {
 	PageSize int    `json:"page_size" form:"page_size"`
 	OrderBy  string `json:"order_by" form:"order_by"`
 	Order    string `json:"order" form:"order"`
+}
+
+func (req MapRequest) Valid(opt string) error {
+	if opt == ValidOptCreateOrUpdate {
+		if req.ID < 0 {
+			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "id")
+		}
+		if req.Name == "" {
+			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "name")
+		}
+	} else if opt == ValidOptDel {
+		if req.ID <= 0 {
+			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "id")
+		}
+	} else {
+		orderByFields := []string{model.FieldID, model.FieldName, model.FieldCreatedTime, model.FieldUpdatedTime}
+		return req.PaginationRequest.Valid(orderByFields)
+	}
+	return nil
 }
 
 func (req PaginationRequest) Valid(orderByList []string) error {

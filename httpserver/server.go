@@ -59,21 +59,23 @@ func RegisterRoutes(router *gin.Engine, middlewares []gin.HandlerFunc) {
 	m := contextPath.Group(ApiMap)
 	//m.Use(middleware.Auth())
 	{
-		m.POST("/base_map", restHandler.CreateOrUpdateBaseMap)
-		m.GET("/base_map", restHandler.ListBaseMap)
-		m.DELETE("/base_map/:id", restHandler.DeleteBaseMap)
-		m.POST("/map_nodes", restHandler.CreateOrUpdateNode) //生成路径节点
-		m.GET("/map_nodes", restHandler.ListMapNodes)
-		//m.GET("/map_nodes_comment", restHandler.ListMapNodesComment) //查询节点标签列表
-		m.DELETE("/map_nodes/:id", restHandler.DeleteMapNodes)
-		m.POST("/map_routes", restHandler.CreateOrUpdateMapRoutes) //生成路径节点+路径
-		m.GET("/map_routes", restHandler.ListMapRoutes)            //查找路径
-		m.DELETE("/map_routes/:id", restHandler.DeleteMapRoute)
-		m.POST("/path", restHandler.CreateOrUpdatePath)
-		m.GET("/paths", restHandler.ListPath)
-		m.DELETE("/path/:id", restHandler.DeletePath)
+		m.POST("/mapping", restHandler.CreateOrUpdateMap)
+		m.GET("/maps", restHandler.ListMap)
+		m.DELETE("/mapping/:id", restHandler.DeleteMap)
+
+		m.POST("/map_info", restHandler.CreateOrUpdateMapInfo)
+		m.GET("/map_info", restHandler.ListMapInfosInfo)
+		m.DELETE("/map_info/:id", restHandler.DeleteMapInfo)
+		m.POST("/map_info_nodes:info_id", restHandler.CreateOrUpdateNode) //生成路径节点
+		m.GET("/map_info_nodes", restHandler.ListMapNodes)
+		m.DELETE("/map_info_nodes/:id", restHandler.DeleteMapNodes)
+		m.POST("/map_info_routes/:info_id", restHandler.CreateOrUpdateMapRoutes) //生成路径节点+路径
+		m.GET("/map_info_routes", restHandler.ListMapRoutes)                     //查找路径
+		m.DELETE("/map_info_routes/:id", restHandler.DeleteMapRoute)
 		m.POST("/check_route", restHandler.CheckRoute) //检验路径
-		m.GET("/map_info/:path_id", restHandler.ListMapInfo)
+		m.GET("/map_infos/:map_id", restHandler.ListMapInfo)
+		m.POST("/map_nodes_batch/", restHandler.BatchDeleteMapNodes) //批量删除路径节点
+
 	}
 
 	if config.Conf.APP.Mode == gin.DebugMode {

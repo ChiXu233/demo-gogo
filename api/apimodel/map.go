@@ -8,17 +8,22 @@ import (
 	"math"
 )
 
-type BaseMapInfo struct {
+type MapInfo struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	CreatedAt string `json:"created_time"`
+	UpdatedAt string `json:"updated_time"`
+}
+
+type MapInfoInfo struct {
 	ID             int     `json:"id"`
 	Name           string  `json:"name"`
 	CreateAt       string  `json:"created_time"`
 	UpdateAt       string  `json:"updated_time"`
-	PathID         int     `json:"path_id"`
+	MapID          int     `json:"map_id"`
 	MapURL         string  `json:"map_url"`
 	MapURLCompress string  `json:"map_url_compress"`
 	PointCloud     string  `json:"point_cloud"` //点云
-	Height         float64 `json:"height"`
-	Weight         float64 `json:"weight"`
 	Origin         float64 `json:"origin"`      //z轴起点
 	Destination    float64 `json:"destination"` //z轴终点
 }
@@ -27,7 +32,7 @@ type RouteNodesInfo struct {
 	CreateAt string          `json:"created_time"`
 	UpdateAt string          `json:"updated_time"`
 	NodeName string          `json:"name"`
-	PathID   int             `json:"path_id"` //对应pathID
+	InfoID   int             `json:"info_id"`
 	Angle    float64         `json:"angle"`   //节点角度
 	Comment  string          `json:"comment"` //标签
 	Roi      pq.Float64Array `json:"roi"`     //节点坐标,[33,66]=>(x,y)
@@ -37,7 +42,7 @@ type MapRoutesInfo struct {
 	CreateAt   string          `json:"created_time"`
 	UpdateAt   string          `json:"updated_time"`
 	RoutesName string          `json:"name"` //路径名称
-	PathID     int             `json:"path_id"`
+	InfoID     int             `json:"info_id"`
 	Start      string          `json:"start"`      //起点
 	End        string          `json:"end" `       //终点
 	StartToEnd string          `json:"start_end"`  //运行方向
@@ -47,28 +52,13 @@ type MapRoutesInfo struct {
 	EndRoi     pq.Float64Array `json:"end_roi"`    //终点坐标
 }
 
-type PathInfo struct {
-	ID       int    `json:"id"`
-	Name     string `json:"name"`
-	CreateAt string `json:"created_time"`
-	UpdateAt string `json:"updated_time"`
-}
-
-type PathRequest struct {
-	ID   int    `json:"id" uri:"id" form:"id"`
-	Name string `json:"name" form:"name"`
-	PaginationRequest
-}
-
-type BaseMapRequest struct {
+type MapInfoRequest struct {
 	ID             int     `json:"id" uri:"id" form:"id"`
 	Name           string  `json:"name" form:"name"`
 	MapURL         string  `json:"map_url"`
 	MapURLCompress string  `json:"map_url_compress"`
 	PointCloud     string  `json:"point_cloud" gorm:"column:point_cloud"` //点云
-	PathID         int     `json:"path_id" form:"path_id"`
-	Height         float64 `json:"height"`
-	Weight         float64 `json:"weight"`
+	MapID          int     `json:"map_id" form:"map_id"`
 	Origin         float64 `json:"origin"`      //z轴起点
 	Destination    float64 `json:"destination"` //z轴终点
 	PaginationRequest
@@ -77,10 +67,10 @@ type BaseMapRequest struct {
 type RouteNodesRequest struct {
 	ID       int             `json:"id" uri:"id" form:"id"`
 	NodeName string          `json:"name" form:"name"`
-	PathID   int             `json:"path_id" form:"path_id"` //对应pathID
-	Angle    float64         `json:"angle"`                  //节点角度
-	Comment  string          `json:"comment"`                //标签
-	Roi      pq.Float64Array `json:"roi"`                    //节点坐标,[33,66]=>(x,y)
+	InfoID   int             `json:"info_id" form:"info_id"`
+	Angle    float64         `json:"angle"`   //节点角度
+	Comment  string          `json:"comment"` //标签
+	Roi      pq.Float64Array `json:"roi"`     //节点坐标,[33,66]=>(x,y)
 	PaginationRequest
 }
 
@@ -89,14 +79,20 @@ type MapRoutesArrRequest struct {
 	Routes []MapRoutesRequest  `json:"routes" form:"routes"`
 }
 
+type MapRequest struct {
+	ID   int    `json:"id" uri:"id" form:"id"`
+	Name string `json:"name" form:"name"`
+	PaginationRequest
+}
+
 type BatchDeleteNodes struct {
 	IDs []int `json:"node_ids"`
 }
 
 type MapRoutesRequest struct {
 	ID         int    `json:"id" uri:"id" form:"id"`
-	RoutesName string `json:"name" form:"name"`                  //路径名称
-	PathID     int    `json:"path_id" form:"path_id"`            //对应pathID
+	RoutesName string `json:"name" form:"name"` //路径名称
+	InfoID     int    `json:"info_id" form:"info_id"`
 	PathRole   string `json:"path_role"`                         //路径运行规则
 	Start      string `json:"start"`                             //起点
 	End        string `json:"end" `                              //终点
@@ -105,16 +101,14 @@ type MapRoutesRequest struct {
 	PaginationRequest
 }
 
-func (m *BaseMapInfo) Load(mapData model.BaseMap) {
+func (m *MapInfoInfo) Load(mapData model.MapInfo) {
 	m.ID = mapData.ID
-	m.PathID = mapData.PathID
+	m.MapID = mapData.MapID
 	m.Name = mapData.Name
 	m.CreateAt = mapData.CreatedAt.String()
 	m.UpdateAt = mapData.UpdatedAt.String()
 	m.MapURL = mapData.MapURL
 	m.MapURLCompress = mapData.MapURLCompress
-	m.Height = mapData.Height
-	m.Weight = mapData.Weight
 	m.Origin = mapData.Origin
 	m.Destination = mapData.Destination
 	m.PointCloud = mapData.PointCloud
@@ -123,7 +117,7 @@ func (m *BaseMapInfo) Load(mapData model.BaseMap) {
 func (m *RouteNodesInfo) Load(nodeData model.MapRouteNodes) {
 	m.ID = nodeData.ID
 	m.NodeName = nodeData.NodeName
-	m.PathID = nodeData.PathID
+	m.InfoID = nodeData.InfoID
 	m.Angle = nodeData.Angle
 	m.Comment = nodeData.Comment
 	m.Roi = nodeData.Roi
@@ -134,7 +128,7 @@ func (m *RouteNodesInfo) Load(nodeData model.MapRouteNodes) {
 func (m *MapRoutesInfo) Load(routeData model.MapRoutes) {
 	m.ID = routeData.ID
 	m.RoutesName = routeData.RoutesName
-	m.PathID = routeData.PathID
+	m.InfoID = routeData.InfoID
 	m.PathRole = routeData.PathRole
 	m.CreateAt = routeData.CreatedAt.String()
 	m.UpdateAt = routeData.UpdatedAt.String()
@@ -146,14 +140,7 @@ func (m *MapRoutesInfo) Load(routeData model.MapRoutes) {
 	m.EndRoi = routeData.EndRoi
 }
 
-func (m *PathInfo) Load(mapData model.Path) {
-	m.ID = mapData.ID
-	m.Name = mapData.Name
-	m.CreateAt = mapData.CreatedAt.String()
-	m.UpdateAt = mapData.UpdatedAt.String()
-}
-
-func (req PathRequest) Valid(opt string) error {
+func (req MapInfoRequest) Valid(opt string) error {
 	if opt == ValidOptCreateOrUpdate {
 		if req.ID < 0 {
 			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "id")
@@ -161,34 +148,15 @@ func (req PathRequest) Valid(opt string) error {
 		if req.Name == "" {
 			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "name")
 		}
-	} else if opt == ValidOptDel {
-		if req.ID <= 0 {
-			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "id")
-		}
-	} else {
-		orderByFields := []string{model.FieldID, model.FieldPathId, model.FieldName, model.FieldCreatedTime, model.FieldUpdatedTime}
-		return req.PaginationRequest.Valid(orderByFields)
-	}
-	return nil
-}
-
-func (req BaseMapRequest) Valid(opt string) error {
-	if opt == ValidOptCreateOrUpdate {
-		if req.ID < 0 {
-			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "id")
-		}
-		if req.Name == "" {
-			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "name")
-		}
-		if req.PathID < 0 {
-			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "path_id")
+		if req.MapID < 0 {
+			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "map_id")
 		}
 	} else if opt == ValidOptDel {
 		if req.ID <= 0 {
 			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "id")
 		}
 	} else {
-		orderByFields := []string{model.FieldID, model.FieldPathId, model.FieldName, model.FieldCreatedTime, model.FieldUpdatedTime}
+		orderByFields := []string{model.FieldID, model.FieldInfoId, model.FieldName, model.FieldCreatedTime, model.FieldUpdatedTime}
 		return req.PaginationRequest.Valid(orderByFields)
 	}
 	return nil
@@ -202,15 +170,15 @@ func (req RouteNodesRequest) Valid(opt string) error {
 		if req.NodeName == "" {
 			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "name")
 		}
-		if req.PathID == 0 {
-			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "path_id")
+		if req.InfoID == 0 {
+			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "info_id")
 		}
 	} else if opt == ValidOptDel {
 		if req.ID <= 0 {
 			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "id")
 		}
 	} else {
-		orderByFields := []string{model.FieldID, model.FieldName, model.FieldPathId, model.FieldCreatedTime, model.FieldUpdatedTime}
+		orderByFields := []string{model.FieldID, model.FieldName, model.FieldInfoId, model.FieldCreatedTime, model.FieldUpdatedTime}
 		return req.PaginationRequest.Valid(orderByFields)
 	}
 	return nil
@@ -224,27 +192,22 @@ func (req MapRoutesRequest) Valid(opt string) error {
 		if req.RoutesName == "" {
 			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "name")
 		}
-		if req.PathID == 0 {
-			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "map_id")
+		if req.InfoID == 0 {
+			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "info_id")
 		}
 	} else if opt == ValidOptDel {
 		if req.ID <= 0 {
 			return fmt.Errorf(errcode.ErrorMsgPrefixInvalidParameter, "id")
 		}
 	} else {
-		orderByFields := []string{model.FieldID, model.FieldName, model.FieldPathId, model.FieldCreatedTime, model.FieldUpdatedTime}
+		orderByFields := []string{model.FieldID, model.FieldName, model.FieldInfoId, model.FieldCreatedTime, model.FieldUpdatedTime}
 		return req.PaginationRequest.Valid(orderByFields)
 	}
 	return nil
 }
 
-type MapPageResponse struct {
-	List []BaseMapInfo `json:"list"`
-	PaginationResponse
-}
-
-type PathResponse struct {
-	List []PathInfo `json:"list"`
+type MapInfoPageResponse struct {
+	List []MapInfoInfo `json:"list"`
 	PaginationResponse
 }
 
@@ -258,15 +221,37 @@ type MapRoutesResponse struct {
 	PaginationResponse
 }
 
+type MapPageResponse struct {
+	List []MapInfo `json:"list"`
+	PaginationResponse
+}
+
 type MapInfosResponse struct {
 	Nodes  []RouteNodesInfo `json:"nodes"`
 	Routes []MapRoutesInfo  `json:"routes"`
 }
 
-func (resp *MapPageResponse) Load(total int64, list []model.BaseMap) {
-	resp.List = make([]BaseMapInfo, 0, len(list))
+func (m *MapInfo) Load(mapData model.Map) {
+	m.ID = mapData.ID
+	m.Name = mapData.Name
+	m.CreatedAt = mapData.CreatedAt.String()
+	m.UpdatedAt = mapData.UpdatedAt.String()
+}
+
+func (resp *MapInfoPageResponse) Load(total int64, list []model.MapInfo) {
+	resp.List = make([]MapInfoInfo, 0, len(list))
 	for _, v := range list {
-		info := BaseMapInfo{}
+		info := MapInfoInfo{}
+		info.Load(v)
+		resp.List = append(resp.List, info)
+	}
+	resp.TotalSize = int(total)
+}
+
+func (resp *MapPageResponse) Load(total int64, list []model.Map) {
+	resp.List = make([]MapInfo, 0, len(list))
+	for _, v := range list {
+		info := MapInfo{}
 		info.Load(v)
 		resp.List = append(resp.List, info)
 	}
@@ -287,16 +272,6 @@ func (resp *MapRoutesResponse) Load(total int64, list []model.MapRoutes) {
 	resp.List = make([]MapRoutesInfo, 0, len(list))
 	for _, v := range list {
 		info := MapRoutesInfo{}
-		info.Load(v)
-		resp.List = append(resp.List, info)
-	}
-	resp.TotalSize = int(total)
-}
-
-func (resp *PathResponse) Load(total int64, list []model.Path) {
-	resp.List = make([]PathInfo, 0, len(list))
-	for _, v := range list {
-		info := PathInfo{}
 		info.Load(v)
 		resp.List = append(resp.List, info)
 	}

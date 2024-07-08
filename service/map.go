@@ -19,39 +19,20 @@ import (
 	"strings"
 )
 
-func (operator *ResourceOperator) CreateOrUpdateBaseMap(req *apimodel.BaseMapRequest) error {
-	var opt model.BaseMap
-	var pathMap model.Path
+func (operator *ResourceOperator) CreateOrUpdateMap(req *apimodel.MapRequest) error {
+	var opt model.Map
 	selector := make(map[string]interface{})
 	// 名称唯一性
 	selector[model.FieldName] = req.Name
-	err := operator.Database.ListEntityByFilter(model.TableNameBaseMap, selector, model.OneQuery, &opt)
+	err := operator.Database.ListEntityByFilter(model.TableNameMap, selector, model.OneQuery, &opt)
 	if err != nil {
 		return err
 	}
 	if opt.ID != 0 && opt.ID != req.ID {
 		return fmt.Errorf(errcode.ErrorMsgSuffixParamExists, "地图")
 	}
-	//if !utils.Exists(req.MapURL) {
-	//	err = fmt.Errorf("路径文件不存在")
-	//	return err
-	//}
-	if (req.Height == 0 && req.Weight == 0) && strings.HasSuffix(path.Base(req.MapURL), ".png") {
-		file, err := os.Open(req.MapURL)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		img, err := png.Decode(file)
-		if err != nil {
-			return err
-		}
-		bounds := img.Bounds()
-		req.Weight = float64(bounds.Dx())
-		req.Height = float64(bounds.Dy())
-	}
 	if req.ID > 0 {
-		err = operator.Database.GetEntityByID(model.TableNameBaseMap, req.ID, &opt)
+		err = operator.Database.GetEntityByID(model.TableNameMap, req.ID, &opt)
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return fmt.Errorf(errcode.ErrorMsgSuffixParamNotExists, "待修改地图")
@@ -59,25 +40,18 @@ func (operator *ResourceOperator) CreateOrUpdateBaseMap(req *apimodel.BaseMapReq
 			return err
 		}
 	}
-	err = operator.Database.GetEntityByID(model.TableNamePath, req.PathID, &pathMap)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return fmt.Errorf(errcode.ErrorMsgSuffixParamNotExists, "关联大路径")
-		}
-		return err
-	}
 	err = copier.Copy(&opt, req)
 	if err != nil {
 		return err
 	}
 	if req.ID > 0 {
-		err = operator.Database.SaveEntity(model.TableNameBaseMap, &opt)
+		err = operator.Database.SaveEntity(model.TableNameMap, &opt)
 		if err != nil {
 			log.Error("地图数据更新失败. err:[%v]", err)
 			return err
 		}
 	} else {
-		err = operator.Database.CreateEntity(model.TableNameBaseMap, &opt)
+		err = operator.Database.CreateEntity(model.TableNameMap, &opt)
 		if err != nil {
 			log.Error("地图数据创建失败. err:[%v]", err)
 			return err
@@ -86,7 +60,7 @@ func (operator *ResourceOperator) CreateOrUpdateBaseMap(req *apimodel.BaseMapReq
 	return nil
 }
 
-func (operator *ResourceOperator) ListBaseMap(req *apimodel.BaseMapRequest) (*apimodel.MapPageResponse, error) {
+func (operator *ResourceOperator) ListMap(req *apimodel.MapRequest) (*apimodel.MapPageResponse, error) {
 	var resp apimodel.MapPageResponse
 	selector := make(map[string]interface{})
 	queryParams := model.QueryParams{}
@@ -96,12 +70,125 @@ func (operator *ResourceOperator) ListBaseMap(req *apimodel.BaseMapRequest) (*ap
 	if req.Name != "" {
 		selector[model.FieldName] = req.Name
 	}
-	if req.PathID > 0 {
-		selector[model.FieldPathId] = req.PathID
+	var count int64
+	var maps []model.Map
+	err := operator.Database.CountEntityByFilter(model.TableNameMap, selector, model.OneQuery, &count)
+	if err != nil {
+		return nil, err
+	}
+	if count > 0 {
+		order := model.Order{
+			Field:     model.FieldID,
+			Direction: apimodel.OrderAsc,
+		}
+		queryParams.Orders = append(queryParams.Orders, order)
+		if req.PageSize > 0 {
+			queryParams.Limit = &req.PageSize
+			offset := (req.PageNo - 1) * req.PageSize
+			queryParams.Offset = &offset
+		}
+		err = operator.Database.ListEntityByFilter(model.TableNameMap, selector, queryParams, &maps)
+		if err != nil {
+			log.Error("地图数据查询失败. err:[%v]", err)
+			return nil, err
+		}
+	}
+	resp.Load(count, maps)
+	return &resp, nil
+}
+
+func (operator *ResourceOperator) DeleteMap(req *apimodel.MapRequest) error {
+	selector := make(map[string]interface{})
+	queryParams := model.QueryParams{}
+	selector[model.FieldID] = req.ID
+	err := operator.Database.DeleteEntityByFilter(model.TableNameMap, selector, queryParams, &model.Map{})
+	if err != nil {
+		log.Error("地图数据删除失败. err:[%v]", err)
+		return err
+	}
+	return nil
+}
+
+func (operator *ResourceOperator) CreateOrUpdateMapInfo(req *apimodel.MapInfoRequest) error {
+	var opt model.MapInfo
+	var mapDB model.Map
+	selector := make(map[string]interface{})
+	// 名称唯一性
+	selector[model.FieldName] = req.Name
+	err := operator.Database.ListEntityByFilter(model.TableNameMapInfo, selector, model.OneQuery, &opt)
+	if err != nil {
+		return err
+	}
+	if opt.ID != 0 && opt.ID != req.ID {
+		return fmt.Errorf(errcode.ErrorMsgSuffixParamExists, "地图信息")
+	}
+
+	//if (req.Height == 0 && req.Weight == 0) && strings.HasSuffix(path.Base(req.MapURL), ".png") {
+	//	file, err := os.Open(req.MapURL)
+	//	if err != nil {
+	//		return err
+	//	}
+	//	defer file.Close()
+	//	img, err := png.Decode(file)
+	//	if err != nil {
+	//		return err
+	//	}
+	//	bounds := img.Bounds()
+	//	req.Weight = float64(bounds.Dx())
+	//	req.Height = float64(bounds.Dy())
+	//}
+	if req.ID > 0 {
+		err = operator.Database.GetEntityByID(model.TableNameMapInfo, req.ID, &opt)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf(errcode.ErrorMsgSuffixParamNotExists, "待修改地图信息")
+			}
+			return err
+		}
+	}
+	err = operator.Database.GetEntityByID(model.TableNameMap, req.MapID, &mapDB)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf(errcode.ErrorMsgSuffixParamNotExists, "关联地图")
+		}
+		return err
+	}
+	err = copier.Copy(&opt, req)
+	if err != nil {
+		return err
+	}
+	if req.ID > 0 {
+		err = operator.Database.SaveEntity(model.TableNameMapInfo, &opt)
+		if err != nil {
+			log.Error("地图信息数据更新失败. err:[%v]", err)
+			return err
+		}
+	} else {
+		err = operator.Database.CreateEntity(model.TableNameMapInfo, &opt)
+		if err != nil {
+			log.Error("地图信息数据创建失败. err:[%v]", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func (operator *ResourceOperator) ListMapInfoPageResponse(req *apimodel.MapInfoRequest) (*apimodel.MapInfoPageResponse, error) {
+	var resp apimodel.MapInfoPageResponse
+	selector := make(map[string]interface{})
+	queryParams := model.QueryParams{}
+	if req.ID > 0 {
+		selector[model.FieldID] = req.ID
+	}
+	if req.Name != "" {
+		selector[model.FieldName] = req.Name
+	}
+	if req.MapID > 0 {
+		selector[model.FieldMapId] = req.MapID
 	}
 	var count int64
-	var maps []model.BaseMap
-	err := operator.Database.CountEntityByFilter(model.TableNameBaseMap, selector, model.OneQuery, &count)
+	var maps []model.MapInfo
+	err := operator.Database.CountEntityByFilter(model.TableNameMapInfo, selector, model.OneQuery, &count)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +203,7 @@ func (operator *ResourceOperator) ListBaseMap(req *apimodel.BaseMapRequest) (*ap
 			offset := (req.PageNo - 1) * req.PageSize
 			queryParams.Offset = &offset
 		}
-		err = operator.Database.ListEntityByFilter(model.TableNameBaseMap, selector, queryParams, &maps)
+		err = operator.Database.ListEntityByFilter(model.TableNameMapInfo, selector, queryParams, &maps)
 		if err != nil {
 			log.Error("地图数据查询失败,err:[%v]", err)
 			return nil, err
@@ -126,11 +213,11 @@ func (operator *ResourceOperator) ListBaseMap(req *apimodel.BaseMapRequest) (*ap
 	return &resp, nil
 }
 
-func (operator *ResourceOperator) DeleteBaseMap(req *apimodel.BaseMapRequest) error {
+func (operator *ResourceOperator) DeleteMapInfo(req *apimodel.MapInfoRequest) error {
 	selector := make(map[string]interface{})
 	queryParams := model.QueryParams{}
 	selector[model.FieldID] = req.ID
-	err := operator.Database.DeleteEntityByFilter(model.TableNameBaseMap, selector, queryParams, &model.BaseMap{})
+	err := operator.Database.DeleteEntityByFilter(model.TableNameMapInfo, selector, queryParams, &model.MapInfo{})
 	if err != nil {
 		log.Error("地图数据删除失败. err:[%v]", err)
 		return err
@@ -140,7 +227,7 @@ func (operator *ResourceOperator) DeleteBaseMap(req *apimodel.BaseMapRequest) er
 
 func (operator *ResourceOperator) CreateOrUpdateNode(req *apimodel.RouteNodesRequest) error {
 	var opt model.MapRouteNodes
-	var mapList model.BaseMap
+	var mapList model.MapInfo
 	var startNode model.MapRouteNodes
 	var routeCreate []model.MapRoutes
 	selector := make(map[string]interface{})
@@ -155,8 +242,7 @@ func (operator *ResourceOperator) CreateOrUpdateNode(req *apimodel.RouteNodesReq
 	}()
 
 	//验证map_id是否存在
-	selector[model.FieldID] = req.PathID
-	err = operator.Database.GetEntityByID(model.TableNamePath, req.PathID, &mapList)
+	err = operator.Database.GetEntityByID(model.TableNameMapInfo, req.InfoID, &mapList)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return fmt.Errorf(errcode.ErrorMsgSuffixParamNotExists, "地图关联路径节点")
@@ -164,8 +250,7 @@ func (operator *ResourceOperator) CreateOrUpdateNode(req *apimodel.RouteNodesReq
 		return err
 	}
 	//同一map_id中名称的唯一性
-	selector = make(map[string]interface{})
-	selector[model.FieldPathId] = req.PathID
+	selector[model.FieldInfoId] = req.InfoID
 	selector[model.FieldName] = req.NodeName
 	err = operator.Database.ListEntityByFilter(model.TableNameMapRouteNodes, selector, model.OneQuery, &opt)
 	if err != nil {
@@ -176,7 +261,7 @@ func (operator *ResourceOperator) CreateOrUpdateNode(req *apimodel.RouteNodesReq
 	}
 
 	selector = make(map[string]interface{})
-	selector[model.FieldPathId] = req.PathID
+	selector[model.FieldInfoId] = req.InfoID
 	//维护nodeName字段
 	params := model.OneQuery
 	order := model.Order{
@@ -221,7 +306,7 @@ func (operator *ResourceOperator) CreateOrUpdateNode(req *apimodel.RouteNodesReq
 	var nodes, nodeRois []model.MapRouteNodes
 	nameMap := make(map[string]struct{})
 	selector = make(map[string]interface{})
-	selector[model.FieldPathId] = req.PathID
+	selector[model.FieldInfoId] = req.InfoID
 	if err = operator.Database.ListEntityByFilter(model.TableNameMapRoutes, selector, model.QueryParams{}, &routes); err != nil {
 		return err
 	}
@@ -259,8 +344,8 @@ func (operator *ResourceOperator) CreateOrUpdateNode(req *apimodel.RouteNodesReq
 			if flag {
 				req.Roi = point
 				//同一线段上
-				routeA := model.MapRoutes{RoutesName: nodeHeadName + "-" + req.NodeName, PathID: req.PathID, PathRole: "双向", Start: nodeHeadName, End: req.NodeName, StartToEnd: "正向行走", EndToStart: "正向行走"}
-				routeB := model.MapRoutes{RoutesName: req.NodeName + "-" + nodeEndName, PathID: req.PathID, PathRole: "双向", Start: req.NodeName, End: nodeEndName, StartToEnd: "正向行走", EndToStart: "正向行走"}
+				routeA := model.MapRoutes{RoutesName: nodeHeadName + "-" + req.NodeName, InfoID: req.InfoID, PathRole: "双向", Start: nodeHeadName, End: req.NodeName, StartToEnd: "正向行走", EndToStart: "正向行走"}
+				routeB := model.MapRoutes{RoutesName: req.NodeName + "-" + nodeEndName, InfoID: req.InfoID, PathRole: "双向", Start: req.NodeName, End: nodeEndName, StartToEnd: "正向行走", EndToStart: "正向行走"}
 				if _, ok := nameMap[routeA.RoutesName]; ok {
 					continue
 				}
@@ -306,8 +391,8 @@ func (operator *ResourceOperator) ListMapNodes(req *apimodel.RouteNodesRequest) 
 	if req.ID > 0 {
 		selector[model.FieldID] = req.ID
 	}
-	if req.PathID > 0 {
-		selector[model.FieldPathId] = req.PathID
+	if req.InfoID > 0 {
+		selector[model.FieldInfoId] = req.InfoID
 	}
 	if req.NodeName != "" {
 		selector[model.FieldName] = req.NodeName
@@ -372,7 +457,7 @@ func (operator *ResourceOperator) DeleteMapNodes(req *apimodel.RouteNodesRequest
 
 	//删除关联的路径
 	selector = make(map[string]interface{})
-	selector[model.FieldPathId] = node.PathID
+	selector[model.FieldInfoId] = node.InfoID
 	err = tx.Database.ListEntityByFilter(model.TableNameMapRoutes, selector, queryParams, &routes)
 	if err != nil {
 		log.Error("查找节点关联路径失败,err:[%v]", err)
@@ -393,7 +478,7 @@ func (operator *ResourceOperator) DeleteMapNodes(req *apimodel.RouteNodesRequest
 		if v.End == node.NodeName {
 			for _, k := range routes {
 				if k.Start == node.NodeName {
-					route := model.MapRoutes{RoutesName: v.Start + "-" + k.End, PathID: v.PathID, PathRole: "双向", Start: v.Start, End: k.End, StartToEnd: "正向行走", EndToStart: "正向行走"}
+					route := model.MapRoutes{RoutesName: v.Start + "-" + k.End, InfoID: v.InfoID, PathRole: "双向", Start: v.Start, End: k.End, StartToEnd: "正向行走", EndToStart: "正向行走"}
 					routeCreate = append(routeCreate, route)
 				}
 			}
@@ -471,7 +556,7 @@ func (operator *ResourceOperator) CreateOrUpdateMapRoute(req *apimodel.MapRoutes
 			var node model.MapRouteNodes
 			//验证路径节点正确性
 			selector[model.FieldName] = v.NodeName
-			selector[model.FieldPathId] = v.PathID
+			selector[model.FieldInfoId] = v.InfoID
 			err = tx.Database.ListEntityByFilter(model.TableNameMapRouteNodes, selector, model.OneQuery, &node)
 			if err != nil {
 				return err
@@ -532,7 +617,7 @@ func (operator *ResourceOperator) CreateOrUpdateMapRoute(req *apimodel.MapRoutes
 	for i := 0; i < len(nodes)-1; i++ {
 		route := model.MapRoutes{
 			RoutesName: nodes[i].NodeName + "-" + nodes[i+1].NodeName,
-			PathID:     req.Nodes[0].PathID,
+			InfoID:     req.Nodes[0].InfoID,
 			//Path:       utils.String(nodes[i].ID) + "-" + utils.String(nodes[i+1].ID),
 			Start:      nodes[i].NodeName,
 			End:        nodes[i+1].NodeName,
@@ -544,7 +629,7 @@ func (operator *ResourceOperator) CreateOrUpdateMapRoute(req *apimodel.MapRoutes
 		var routeIndex model.MapRoutes
 		selector = make(map[string]interface{})
 		selector[model.FieldName] = route.RoutesName
-		selector[model.FieldPathId] = route.PathID
+		selector[model.FieldInfoId] = route.InfoID
 		err = tx.Database.ListEntityByFilter(model.TableNameMapRoutes, selector, model.OneQuery, &routeIndex)
 		if err != nil {
 			return err
@@ -564,7 +649,7 @@ func (operator *ResourceOperator) CreateOrUpdateMapRoute(req *apimodel.MapRoutes
 			//名称唯一性
 			selector = make(map[string]interface{})
 			selector[model.FieldName] = v.RoutesName
-			selector[model.FieldPathId] = v.PathID
+			selector[model.FieldInfoId] = v.InfoID
 			err = tx.Database.ListEntityByFilter(model.TableNameMapRoutes, selector, model.OneQuery, &route)
 			if err != nil {
 				return err
@@ -602,7 +687,7 @@ func (operator *ResourceOperator) CreateOrUpdateMapRoute(req *apimodel.MapRoutes
 		var routes []model.MapRoutes
 		var nodeNames, nodeRois []model.MapRouteNodes
 		selector = make(map[string]interface{})
-		selector[model.FieldPathId] = req.Nodes[0].PathID
+		selector[model.FieldInfoId] = req.Nodes[0].InfoID
 		if err = tx.Database.ListEntityByFilter(model.TableNameMapRoutes, selector, model.QueryParams{}, &routes); err != nil {
 			return err
 		}
@@ -641,8 +726,8 @@ func (operator *ResourceOperator) CreateOrUpdateMapRoute(req *apimodel.MapRoutes
 					if flag {
 						nodes[i].Roi = point
 						//同一线段上
-						routeA := model.MapRoutes{RoutesName: nodeHeadName + "-" + nodes[i].NodeName, PathID: nodes[i].PathID, PathRole: "双向", Start: nodeHeadName, End: nodes[i].NodeName, StartToEnd: "正向行走", EndToStart: "正向行走"}
-						routeB := model.MapRoutes{RoutesName: nodes[i].NodeName + "-" + nodeEndName, PathID: nodes[i].PathID, PathRole: "双向", Start: nodes[i].NodeName, End: nodeEndName, StartToEnd: "正向行走", EndToStart: "正向行走"}
+						routeA := model.MapRoutes{RoutesName: nodeHeadName + "-" + nodes[i].NodeName, InfoID: nodes[i].InfoID, PathRole: "双向", Start: nodeHeadName, End: nodes[i].NodeName, StartToEnd: "正向行走", EndToStart: "正向行走"}
+						routeB := model.MapRoutes{RoutesName: nodes[i].NodeName + "-" + nodeEndName, InfoID: nodes[i].InfoID, PathRole: "双向", Start: nodes[i].NodeName, End: nodeEndName, StartToEnd: "正向行走", EndToStart: "正向行走"}
 						if _, ok := nameMap[routeA.RoutesName]; ok {
 							continue
 						}
@@ -691,8 +776,8 @@ func (operator *ResourceOperator) ListMapRoutes(req *apimodel.MapRoutesRequest) 
 	if req.RoutesName != "" {
 		selector[model.FieldName] = req.RoutesName
 	}
-	if req.PathID != 0 {
-		selector[model.FieldPathId] = req.PathID
+	if req.InfoID != 0 {
+		selector[model.FieldInfoId] = req.InfoID
 	}
 	var count int64
 	var maps []model.MapRoutes
@@ -753,7 +838,7 @@ func (operator *ResourceOperator) DeleteMapRoute(req *apimodel.MapRoutesRequest)
 		return err
 	}
 	selector = make(map[string]interface{})
-	selector[model.FieldPathId] = route.PathID
+	selector[model.FieldInfoId] = route.InfoID
 	err = tx.Database.ListEntityByFilter(model.TableNameMapRoutes, selector, queryParams, &routes)
 	if err != nil {
 		log.Error("查找路径数据失败,err:[%v]", err)
@@ -782,7 +867,7 @@ func (operator *ResourceOperator) DeleteMapRoute(req *apimodel.MapRoutesRequest)
 	//删除以route.end为起点的route
 	for _, v := range routes {
 		if v.Start == route.End {
-			tempRoute := model.MapRoutes{RoutesName: route.Start + "-" + v.End, PathID: route.PathID, PathRole: "双向", Start: route.Start, End: v.End, StartToEnd: "正向行走", EndToStart: "正向行走"}
+			tempRoute := model.MapRoutes{RoutesName: route.Start + "-" + v.End, InfoID: route.InfoID, PathRole: "双向", Start: route.Start, End: v.End, StartToEnd: "正向行走", EndToStart: "正向行走"}
 			routeCreate = append(routeCreate, tempRoute)
 		}
 	}
@@ -811,107 +896,16 @@ func (operator *ResourceOperator) DeleteMapRoute(req *apimodel.MapRoutesRequest)
 	return nil
 }
 
-func (operator *ResourceOperator) CreateOrUpdatePath(req *apimodel.PathRequest) error {
-	var opt model.Path
-	selector := make(map[string]interface{})
-	// 名称唯一性
-	selector[model.FieldName] = req.Name
-	err := operator.Database.ListEntityByFilter(model.TableNamePath, selector, model.OneQuery, &opt)
-	if err != nil {
-		return err
-	}
-	if opt.ID != 0 && opt.ID != req.ID {
-		return fmt.Errorf(errcode.ErrorMsgSuffixParamExists, "路径")
-	}
-	if req.ID > 0 {
-		err = operator.Database.GetEntityByID(model.TableNamePath, req.ID, &opt)
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return fmt.Errorf(errcode.ErrorMsgSuffixParamNotExists, "待修改路径")
-			}
-			return err
-		}
-	}
-	err = copier.Copy(&opt, req)
-	if err != nil {
-		return err
-	}
-	if req.ID > 0 {
-		err = operator.Database.SaveEntity(model.TableNamePath, &opt)
-		if err != nil {
-			log.Error("路径数据更新失败. err:[%v]", err)
-			return err
-		}
-	} else {
-		err = operator.Database.CreateEntity(model.TableNamePath, &opt)
-		if err != nil {
-			log.Error("路径数据创建失败. err:[%v]", err)
-			return err
-		}
-	}
-	return nil
-}
-
-func (operator *ResourceOperator) ListPath(req *apimodel.PathRequest) (*apimodel.PathResponse, error) {
-	var resp apimodel.PathResponse
-	selector := make(map[string]interface{})
-	queryParams := model.QueryParams{}
-	if req.ID > 0 {
-		selector[model.FieldID] = req.ID
-	}
-	if req.Name != "" {
-		selector[model.FieldName] = req.Name
-	}
-	var count int64
-	var maps []model.Path
-	err := operator.Database.CountEntityByFilter(model.TableNamePath, selector, model.OneQuery, &count)
-	if err != nil {
-		return nil, err
-	}
-	if count > 0 {
-		order := model.Order{
-			Field:     req.OrderBy,
-			Direction: apimodel.OrderDesc,
-		}
-		queryParams.Orders = append(queryParams.Orders, order)
-		if req.PageSize > 0 {
-			queryParams.Limit = &req.PageSize
-			offset := (req.PageNo - 1) * req.PageSize
-			queryParams.Offset = &offset
-		}
-		err = operator.Database.ListEntityByFilter(model.TableNamePath, selector, queryParams, &maps)
-		if err != nil {
-			log.Error("路径数据查询失败. err:[%v]", err)
-			return nil, err
-		}
-	}
-	resp.Load(count, maps)
-	return &resp, nil
-}
-
-func (operator *ResourceOperator) DeletePath(req *apimodel.PathRequest) error {
-	selector := make(map[string]interface{})
-	queryParams := model.QueryParams{}
-	selector[model.FieldID] = req.ID
-	err := operator.Database.DeleteEntityByFilter(model.TableNamePath, selector, queryParams, &model.Path{})
-	if err != nil {
-		log.Error("路径数据删除失败. err:[%v]", err)
-		return err
-	}
-	return nil
-}
-
 func (operator *ResourceOperator) CheckRoute(req *apimodel.MapRoutesArrRequest) error {
 	selector := make(map[string]interface{})
 	var nodeHead, nodeEnd model.MapRouteNodes
-	var mapInfo model.BaseMap
-	selector[model.FieldID] = req.Routes[0].PathID
-	err := operator.Database.ListEntityByFilter(model.TableNameBaseMap, selector, model.OneQuery, &mapInfo)
+	var mapInfo model.MapInfo
+	selector[model.FieldID] = req.Routes[0].InfoID
+	err := operator.Database.ListEntityByFilter(model.TableNameMapInfo, selector, model.OneQuery, &mapInfo)
 	if err != nil {
 		log.Error("查询地图信息失败,err:[%v]", err)
 		return err
 	}
-	//mapInfo.MapURL = "/Users/dg2023/Desktop/photo/testphoto.jpg"
 	mapInfo.MapURL = "/Users/dg2023/Desktop/test_photo.png"
 	file, err := os.Open(mapInfo.MapURL)
 	if err != nil {
@@ -923,7 +917,7 @@ func (operator *ResourceOperator) CheckRoute(req *apimodel.MapRoutesArrRequest) 
 	for _, route := range req.Routes {
 		var mapRoute model.MapRoutes
 		selector = make(map[string]interface{})
-		selector[model.FieldPathId] = route.PathID
+		selector[model.FieldInfoId] = route.InfoID
 		selector[model.FieldName] = route.RoutesName
 		err = operator.Database.ListEntityByFilter(model.TableNameMapRoutes, selector, model.OneQuery, &mapRoute)
 		if err != nil {
@@ -991,7 +985,7 @@ func (operator *ResourceOperator) ListMapInfo(req *apimodel.RouteNodesRequest) (
 		Direction: apimodel.OrderAsc,
 	}
 	queryParams.Orders = append(queryParams.Orders, order)
-	selector[model.FieldPathId] = req.PathID
+	selector[model.FieldInfoId] = req.InfoID
 	err := operator.Database.ListEntityByFilter(model.TableNameMapRoutes, selector, queryParams, &routes)
 	if err != nil {
 		log.Error("路径数据查询失败. err:[%v]", err)
@@ -1049,7 +1043,7 @@ func (operator *ResourceOperator) BatchDeleteMapNodes(req *apimodel.BatchDeleteN
 		return err
 	}
 	//删除与节点关联路径
-	filter[model.FieldPathId] = nodes[0].PathID
+	filter[model.FieldInfoId] = nodes[0].InfoID
 	err = tx.Database.ListEntityByFilter(model.TableNameMapRoutes, filter, model.QueryParams{}, &routes)
 	if err != nil {
 		return err

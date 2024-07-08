@@ -9,8 +9,8 @@ import (
 	"strconv"
 )
 
-func (handler *RestHandler) CreateOrUpdateBaseMap(c *gin.Context) {
-	var req apimodel.BaseMapRequest
+func (handler *RestHandler) CreateOrUpdateMap(c *gin.Context) {
+	var req apimodel.MapRequest
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		app.SendParameterErrorResponse(c, errcode.ErrorMsgLoadParam)
@@ -18,10 +18,10 @@ func (handler *RestHandler) CreateOrUpdateBaseMap(c *gin.Context) {
 	}
 	err = req.Valid(apimodel.ValidOptCreateOrUpdate)
 	if err != nil {
-		app.SendServerErrorResponse(c, errcode.ErrorMsgCreateOrUpdate, err)
+		app.SendParameterErrorResponse(c, err.Error())
 		return
 	}
-	err = handler.Operator.CreateOrUpdateBaseMap(&req)
+	err = handler.Operator.CreateOrUpdateMap(&req)
 	if err != nil {
 		app.SendServerErrorResponse(c, errcode.ErrorMsgCreateOrUpdate, err)
 		return
@@ -29,8 +29,8 @@ func (handler *RestHandler) CreateOrUpdateBaseMap(c *gin.Context) {
 	app.Success(c, nil)
 }
 
-func (handler *RestHandler) ListBaseMap(c *gin.Context) {
-	req := apimodel.BaseMapRequest{
+func (handler *RestHandler) ListMap(c *gin.Context) {
+	req := apimodel.MapRequest{
 		PaginationRequest: apimodel.DefaultPaginationRequest,
 	}
 	err := c.ShouldBindQuery(&req)
@@ -43,7 +43,7 @@ func (handler *RestHandler) ListBaseMap(c *gin.Context) {
 		app.SendParameterErrorResponse(c, err.Error())
 		return
 	}
-	resp, err := handler.Operator.ListBaseMap(&req)
+	resp, err := handler.Operator.ListMap(&req)
 	if err != nil {
 		app.SendServerErrorResponse(c, errcode.ErrorMsgListData, err)
 		return
@@ -51,8 +51,8 @@ func (handler *RestHandler) ListBaseMap(c *gin.Context) {
 	app.Success(c, resp)
 }
 
-func (handler *RestHandler) DeleteBaseMap(c *gin.Context) {
-	var req apimodel.BaseMapRequest
+func (handler *RestHandler) DeleteMap(c *gin.Context) {
+	var req apimodel.MapRequest
 	err := c.ShouldBindUri(&req)
 	if err != nil {
 		app.SendParameterErrorResponse(c, errcode.ErrorMsgLoadParam)
@@ -63,7 +63,69 @@ func (handler *RestHandler) DeleteBaseMap(c *gin.Context) {
 		app.SendParameterErrorResponse(c, err.Error())
 		return
 	}
-	err = handler.Operator.DeleteBaseMap(&req)
+	err = handler.Operator.DeleteMap(&req)
+	if err != nil {
+		app.SendServerErrorResponse(c, errcode.ErrorMsgDeleteData, err)
+		return
+	}
+	app.Success(c, nil)
+}
+
+func (handler *RestHandler) CreateOrUpdateMapInfo(c *gin.Context) {
+	var req apimodel.MapInfoRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		app.SendParameterErrorResponse(c, errcode.ErrorMsgLoadParam)
+		return
+	}
+	err = req.Valid(apimodel.ValidOptCreateOrUpdate)
+	if err != nil {
+		app.SendServerErrorResponse(c, errcode.ErrorMsgCreateOrUpdate, err)
+		return
+	}
+	err = handler.Operator.CreateOrUpdateMapInfo(&req)
+	if err != nil {
+		app.SendServerErrorResponse(c, errcode.ErrorMsgCreateOrUpdate, err)
+		return
+	}
+	app.Success(c, nil)
+}
+
+func (handler *RestHandler) ListMapInfosInfo(c *gin.Context) {
+	req := apimodel.MapInfoRequest{
+		PaginationRequest: apimodel.DefaultPaginationRequest,
+	}
+	err := c.ShouldBindQuery(&req)
+	if err != nil {
+		app.SendParameterErrorResponse(c, errcode.ErrorMsgLoadParam)
+		return
+	}
+	err = req.Valid(apimodel.ValidOptList)
+	if err != nil {
+		app.SendParameterErrorResponse(c, err.Error())
+		return
+	}
+	resp, err := handler.Operator.ListMapInfoPageResponse(&req)
+	if err != nil {
+		app.SendServerErrorResponse(c, errcode.ErrorMsgListData, err)
+		return
+	}
+	app.Success(c, resp)
+}
+
+func (handler *RestHandler) DeleteMapInfo(c *gin.Context) {
+	var req apimodel.MapInfoRequest
+	err := c.ShouldBindUri(&req)
+	if err != nil {
+		app.SendParameterErrorResponse(c, errcode.ErrorMsgLoadParam)
+		return
+	}
+	err = req.Valid(apimodel.ValidOptDel)
+	if err != nil {
+		app.SendParameterErrorResponse(c, err.Error())
+		return
+	}
+	err = handler.Operator.DeleteMapInfo(&req)
 	if err != nil {
 		app.SendServerErrorResponse(c, errcode.ErrorMsgDeleteData, err)
 		return
@@ -78,8 +140,8 @@ func (handler *RestHandler) CreateOrUpdateNode(c *gin.Context) {
 		app.SendParameterErrorResponse(c, errcode.ErrorMsgLoadParam)
 		return
 	}
-	pathId, _ := strconv.Atoi(c.Param("path_id"))
-	req.PathID = pathId
+	infoId, _ := strconv.Atoi(c.Param("path_id"))
+	req.InfoID = infoId
 	req.NodeName = ""
 	err = req.Valid(apimodel.ValidOptCreateOrUpdate)
 	if err != nil {
@@ -145,9 +207,9 @@ func (handler *RestHandler) CreateOrUpdateMapRoutes(c *gin.Context) {
 		app.SendParameterErrorResponse(c, errcode.ErrorMsgLoadParam)
 		return
 	}
-	pathId, _ := strconv.Atoi(c.Param("path_id"))
+	infoID, _ := strconv.Atoi(c.Param("info_id"))
 	for i := range req.Nodes {
-		req.Nodes[i].PathID = pathId
+		req.Nodes[i].InfoID = infoID
 		req.Nodes[i].NodeName = ""
 		err = req.Nodes[i].Valid(apimodel.ValidOptCreateOrUpdate)
 		if err != nil {
@@ -203,68 +265,6 @@ func (handler *RestHandler) DeleteMapRoute(c *gin.Context) {
 	app.Success(c, nil)
 }
 
-func (handler *RestHandler) CreateOrUpdatePath(c *gin.Context) {
-	var req apimodel.PathRequest
-	err := c.ShouldBindJSON(&req)
-	if err != nil {
-		app.SendParameterErrorResponse(c, errcode.ErrorMsgLoadParam)
-		return
-	}
-	err = req.Valid(apimodel.ValidOptCreateOrUpdate)
-	if err != nil {
-		app.SendParameterErrorResponse(c, err.Error())
-		return
-	}
-	err = handler.Operator.CreateOrUpdatePath(&req)
-	if err != nil {
-		app.SendServerErrorResponse(c, errcode.ErrorMsgCreateOrUpdate, err)
-		return
-	}
-	app.Success(c, nil)
-}
-
-func (handler *RestHandler) ListPath(c *gin.Context) {
-	req := apimodel.PathRequest{
-		PaginationRequest: apimodel.DefaultPaginationRequest,
-	}
-	err := c.ShouldBindQuery(&req)
-	if err != nil {
-		app.SendParameterErrorResponse(c, errcode.ErrorMsgLoadParam)
-		return
-	}
-	err = req.Valid(apimodel.ValidOptList)
-	if err != nil {
-		app.SendParameterErrorResponse(c, err.Error())
-		return
-	}
-	resp, err := handler.Operator.ListPath(&req)
-	if err != nil {
-		app.SendServerErrorResponse(c, errcode.ErrorMsgListData, err)
-		return
-	}
-	app.Success(c, resp)
-}
-
-func (handler *RestHandler) DeletePath(c *gin.Context) {
-	var req apimodel.PathRequest
-	err := c.ShouldBindUri(&req)
-	if err != nil {
-		app.SendParameterErrorResponse(c, errcode.ErrorMsgLoadParam)
-		return
-	}
-	err = req.Valid(apimodel.ValidOptDel)
-	if err != nil {
-		app.SendParameterErrorResponse(c, err.Error())
-		return
-	}
-	err = handler.Operator.DeletePath(&req)
-	if err != nil {
-		app.SendServerErrorResponse(c, errcode.ErrorMsgDeleteData, err)
-		return
-	}
-	app.Success(c, nil)
-}
-
 // CheckRoute 导航路径校验
 func (handler *RestHandler) CheckRoute(c *gin.Context) {
 	var req apimodel.MapRoutesArrRequest
@@ -292,9 +292,9 @@ func (handler *RestHandler) CheckRoute(c *gin.Context) {
 // ListMapInfo 获取地图切片上所有路径以及点位信息
 func (handler *RestHandler) ListMapInfo(c *gin.Context) {
 	var req apimodel.RouteNodesRequest
-	pathID, _ := strconv.Atoi(c.Param("path_id"))
-	req.PathID = pathID
-	if req.PathID <= 0 {
+	infoID, _ := strconv.Atoi(c.Param("info_id"))
+	req.InfoID = infoID
+	if req.InfoID <= 0 {
 		app.SendParameterErrorResponse(c, errcode.ErrorMsgLoadParam)
 		return
 	}

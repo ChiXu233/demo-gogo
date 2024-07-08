@@ -47,7 +47,6 @@ func main() {
 
 	server := httpserver.CreateHttpServer()
 	listenAddress := fmt.Sprintf("0.0.0.0:%d", config.Conf.APP.Port)
-
 	if err = server.Run(listenAddress); err != nil {
 		log.Error("ma_teach exit with error: %v", err)
 	}

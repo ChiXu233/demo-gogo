@@ -2,15 +2,18 @@ package model
 
 import "github.com/lib/pq"
 
-type BaseMap struct {
+type Map struct {
+	Model
+	Name string `json:"name" gorm:"column:name"`
+}
+
+type MapInfo struct {
 	Model
 	Name           string  `json:"name" gorm:"column:name"`
 	MapURL         string  `json:"map_url" gorm:"column:map_url"`
 	MapURLCompress string  `json:"map_url_compress" gorm:"column:map_url_compress"`
 	PointCloud     string  `json:"point_cloud" gorm:"column:point_cloud"` //点云
-	PathID         int     `json:"path_id" gorm:"column:path_id"`         //对应大路径id
-	Height         float64 `json:"height"`
-	Weight         float64 `json:"weight"`
+	MapID          int     `json:"map_id" gorm:"column:map_id"`           //对应大路径id
 	Origin         float64 `json:"origin" gorm:"column:origin"`           //z轴起点
 	Destination    float64 `json:"destination" gorm:"column:destination"` //z轴终点
 }
@@ -18,7 +21,7 @@ type BaseMap struct {
 type MapRoutes struct {
 	Model
 	RoutesName string          `json:"name" gorm:"column:name"`           //路径名称
-	PathID     int             `json:"path_id" gorm:"column:path_id"`     //对应大路径id
+	InfoID     int             `json:"info_id" gorm:"column:info_id"`     //对应大路径id
 	PathRole   string          `json:"path_role" gorm:"column:path_role"` //路径运行规则
 	Start      string          `json:"start" gorm:"column:start"`
 	End        string          `json:"end" gorm:"column:end"`
@@ -30,27 +33,23 @@ type MapRoutes struct {
 
 type MapRouteNodes struct {
 	Model
-	NodeName string          `json:"name" gorm:"column:name" `          //节点名称
-	PathID   int             `json:"path_id" gorm:"column:path_id"`     //对应大路径id
+	NodeName string          `json:"name" gorm:"column:name" ` //节点名称
+	InfoID   int             `json:"info_id" gorm:"column:info_id"`
 	Angle    float64         `json:"angle" gorm:"column:angle"`         //节点角度
 	Comment  string          `json:"comment" gorm:"column:comment"`     //标签
 	Roi      pq.Float64Array `gorm:"column:roi;type:float8[]" json:"-"` //节点坐标,[33,66]=>(x,y)
 }
 
-type Path struct {
-	Model
-	Name string `json:"name" gorm:"column:name"` //大路径名称
+func (m *Map) TableName() string {
+	return TableNameMap
 }
 
-func (m *BaseMap) TableName() string {
-	return TableNameMap
+func (m *MapInfo) TableName() string {
+	return TableNameMapInfo
 }
 func (m *MapRoutes) TableName() string {
 	return TableNameMapRoutes
 }
 func (m *MapRouteNodes) TableName() string {
 	return TableNameMapRouteNodes
-}
-func (m *Path) TableName() string {
-	return TableNamePath
 }

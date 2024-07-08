@@ -12,18 +12,18 @@ type ResourceOperator struct {
 }
 
 type Operator interface {
-	CreateOrUpdateBaseMap(req *apimodel.BaseMapRequest) error
-	ListBaseMap(req *apimodel.BaseMapRequest) (*apimodel.MapPageResponse, error)
-	DeleteBaseMap(req *apimodel.BaseMapRequest) error
+	CreateOrUpdateMap(req *apimodel.MapRequest) error
+	ListMap(req *apimodel.MapRequest) (*apimodel.MapPageResponse, error)
+	DeleteMap(req *apimodel.MapRequest) error
+	CreateOrUpdateMapInfo(req *apimodel.MapInfoRequest) error
+	ListMapInfoPageResponse(req *apimodel.MapInfoRequest) (*apimodel.MapInfoPageResponse, error)
+	DeleteMapInfo(req *apimodel.MapInfoRequest) error
 	CreateOrUpdateNode(req *apimodel.RouteNodesRequest) error
 	ListMapNodes(req *apimodel.RouteNodesRequest) (*apimodel.RouteNodesResponse, error)
 	DeleteMapNodes(req *apimodel.RouteNodesRequest) error
 	CreateOrUpdateMapRoute(req *apimodel.MapRoutesArrRequest) error
 	ListMapRoutes(req *apimodel.MapRoutesRequest) (*apimodel.MapRoutesResponse, error)
 	DeleteMapRoute(req *apimodel.MapRoutesRequest) error
-	CreateOrUpdatePath(req *apimodel.PathRequest) error
-	ListPath(req *apimodel.PathRequest) (*apimodel.PathResponse, error)
-	DeletePath(req *apimodel.PathRequest) error
 	CheckRoute(req *apimodel.MapRoutesArrRequest) error
 	ListMapInfo(req *apimodel.RouteNodesRequest) (*apimodel.MapInfosResponse, error)
 	BatchDeleteMapNodes(req *apimodel.BatchDeleteNodes) error
