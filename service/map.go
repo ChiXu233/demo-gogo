@@ -123,20 +123,6 @@ func (operator *ResourceOperator) CreateOrUpdateMapInfo(req *apimodel.MapInfoReq
 		return fmt.Errorf(errcode.ErrorMsgSuffixParamExists, "地图信息")
 	}
 
-	//if (req.Height == 0 && req.Weight == 0) && strings.HasSuffix(path.Base(req.MapURL), ".png") {
-	//	file, err := os.Open(req.MapURL)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	defer file.Close()
-	//	img, err := png.Decode(file)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	bounds := img.Bounds()
-	//	req.Weight = float64(bounds.Dx())
-	//	req.Height = float64(bounds.Dy())
-	//}
 	if req.ID > 0 {
 		err = operator.Database.GetEntityByID(model.TableNameMapInfo, req.ID, &opt)
 		if err != nil {
@@ -346,6 +332,10 @@ func (operator *ResourceOperator) CreateOrUpdateNode(req *apimodel.RouteNodesReq
 				//同一线段上
 				routeA := model.MapRoutes{RoutesName: nodeHeadName + "-" + req.NodeName, InfoID: req.InfoID, PathRole: "双向", Start: nodeHeadName, End: req.NodeName, StartToEnd: "正向行走", EndToStart: "正向行走"}
 				routeB := model.MapRoutes{RoutesName: req.NodeName + "-" + nodeEndName, InfoID: req.InfoID, PathRole: "双向", Start: req.NodeName, End: nodeEndName, StartToEnd: "正向行走", EndToStart: "正向行走"}
+				//略过首位相同点
+				if (routeA.Start == routeA.End) || (routeB.Start == routeB.End) {
+					continue
+				}
 				if _, ok := nameMap[routeA.RoutesName]; ok {
 					continue
 				}
@@ -637,6 +627,10 @@ func (operator *ResourceOperator) CreateOrUpdateMapRoute(req *apimodel.MapRoutes
 		if routeIndex.ID != 0 {
 			continue
 		}
+		//略过首位相同点
+		if route.Start == route.End {
+			continue
+		}
 		createRoutes = append(createRoutes, route)
 	}
 
@@ -674,6 +668,10 @@ func (operator *ResourceOperator) CreateOrUpdateMapRoute(req *apimodel.MapRoutes
 				err = copier.Copy(&route, v)
 				if err != nil {
 					return err
+				}
+				//略过首位相同点
+				if route.Start == route.End {
+					continue
 				}
 				createRoutes = append(createRoutes, route)
 			}
@@ -731,9 +729,17 @@ func (operator *ResourceOperator) CreateOrUpdateMapRoute(req *apimodel.MapRoutes
 						if _, ok := nameMap[routeA.RoutesName]; ok {
 							continue
 						}
+						//略过首位相同点
+						if routeA.Start == routeA.End {
+							continue
+						}
 						nameMap[routeA.RoutesName] = struct{}{}
 						createRoutes = append(createRoutes, routeA)
 						if _, ok := nameMap[routeB.RoutesName]; ok {
+							continue
+						}
+						//略过首位相同点
+						if routeB.Start == routeB.End {
 							continue
 						}
 						nameMap[routeB.RoutesName] = struct{}{}
@@ -867,7 +873,10 @@ func (operator *ResourceOperator) DeleteMapRoute(req *apimodel.MapRoutesRequest)
 	//删除以route.end为起点的route
 	for _, v := range routes {
 		if v.Start == route.End {
-			tempRoute := model.MapRoutes{RoutesName: route.Start + "-" + v.End, InfoID: route.InfoID, PathRole: "双向", Start: route.Start, End: v.End, StartToEnd: "正向行走", EndToStart: "正向行走"}
+			tempRoute := model.MapRoutes{RoutesName: route.Start + "-" + v.End, InfoID: route.InfoID, PathRole: "双向", Start: route.Start, End: v.End, StartToEnd: "正向行走", EndToStart: "正向行走"} //略过首位相同点
+			if tempRoute.Start == tempRoute.End {
+				continue
+			}
 			routeCreate = append(routeCreate, tempRoute)
 		}
 	}
